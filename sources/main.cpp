@@ -1,3 +1,4 @@
+#include <string>
 #include "raylib.h"
 
 #define SCREEN_WIDTH (800)
@@ -10,7 +11,8 @@ int main(void)
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE);
     SetTargetFPS(60);
 
-    Texture2D texture = LoadTexture(ASSETS_PATH"test.png"); // Check README.md for how this works
+    std::string texturePath = ASSETS_PATH + std::string{"test.png"};
+    Texture2D texture = LoadTexture(texturePath.c_str());
 
     while (!WindowShouldClose())
     {
