@@ -1,8 +1,8 @@
 #include <string>
 #include "raylib.h"
 
-#define SCREEN_WIDTH (800)
-#define SCREEN_HEIGHT (450)
+#define SCREEN_WIDTH (1600)
+#define SCREEN_HEIGHT (1200)
 
 #define WINDOW_TITLE "Window title"
 
