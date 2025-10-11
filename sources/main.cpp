@@ -9,6 +9,7 @@ int gridSize = 50;
 float speed = 2.0f;
 float maxEnergy = 10.0f;
 float spawnFrequency = 10.0f;
+float predatorEnergyLossFactor = 0.5f;
 
 enum EntityType {PREDATOR, PREY};
 struct Entity{
@@ -115,22 +116,21 @@ int main(void)
                         dir = Vector3Scale(Vector3Normalize(dir), speed);
                         entity.velocity.x = dir.x;
                         entity.velocity.z = dir.z;
+                        entity.energy -= dt * predatorEnergyLossFactor;
                     }else if (dist < 1.0f) {
                         prey.energy = 0;
+                        entity.energy += maxEnergy * 0.5f;
                     }
                 }
             }
-            // TODO prey flee predators
-            // TODO lose energy over time, gain energy on kill, die at 0
         }
         // Remove dead entities
-        // for(auto it = entities.begin(); it != entities.end();) {
-        //     if(it->energy <= 0){
-        //         entities.erase(it);
-        //     }else{
-        //         it++;
-        //     }
-        // }
+        for(auto it = entities.begin(); it != entities.end(); it++) {
+            if(it->energy <= 0){
+                entities.erase(it);
+                break; // TODO this is a hack to avoid iterator invalidation, fix later
+            }
+        }
 
         UpdateCamera(&camera, CAMERA_FIRST_PERSON);
         BeginDrawing();
