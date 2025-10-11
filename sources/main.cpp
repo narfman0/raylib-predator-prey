@@ -1,204 +1,188 @@
-#include <list>
-#include <vector>
 #include <ctime>
+#include <vector>
 
 #include <flecs.h>
 #include <raylib.h>
 #include <raymath.h>
 
-int gridSize = 50;
+int gridSize = 25;
 float speed = 2.0f;
 float maxEnergy = 10.0f;
-float spawnFrequency = 10.0f;
+float spawnFrequency = 4.0f;
 float predatorEnergyLossFactor = 0.7f;
+float gridSizeF = (float)gridSize;
+float gridSizeHalfF = (float)gridSize / 2.f;
 
-enum EntityType
-{
-    PREDATOR,
-    PREY
+enum EntityType { PREDATOR, PREY };
+
+struct TransformComponent {
+  Vector3 position;
+  Vector3 velocity;
 };
-struct Entity
-{
-    Vector3 position;
-    Vector3 velocity;
-    EntityType type;
-    float spawnTime = spawnFrequency;
-    float energy = maxEnergy;
+struct SpawnComponent {
+  float spawnTime = spawnFrequency;
+  float energy = maxEnergy;
 };
 
-inline float randRange(float min, float max)
-{
-    return min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (max - min)));
+inline float randRange(float min, float max) {
+  return min + static_cast<float>(rand()) /
+                   (static_cast<float>(RAND_MAX / (max - min)));
 }
 
-Entity spawnEntity(Vector3 pos, EntityType type)
-{
-    return Entity(Vector3{pos}, Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)}, type);
+void initializeEntities(flecs::world &ecs, int count) {
+  for (int i = 0; i < count; i++) {
+    ecs.entity()
+        .set<TransformComponent>(
+            {Vector3{randRange(-gridSizeHalfF, gridSizeHalfF), 0,
+                     randRange(-gridSizeHalfF, gridSizeHalfF)},
+             Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)}})
+        .set<EntityType>(i % 4 == 0 ? EntityType::PREDATOR : EntityType::PREY)
+        .set<SpawnComponent>({spawnFrequency, maxEnergy});
+  }
 }
 
-void initializeEntities(std::vector<Entity> &entities, int count, float gridSizeHalfF)
-{
-    for (int i = 0; i < count; i++)
-    {
-        Vector3 pos{randRange(-gridSizeHalfF, gridSizeHalfF), 0, randRange(-gridSizeHalfF, gridSizeHalfF)};
-        Vector3 vel{randRange(-speed, speed), 0, randRange(-speed, speed)};
-        EntityType type = i % 4 == 0 ? EntityType::PREDATOR : EntityType::PREY;
-        entities.emplace_back(pos, vel, type);
+void updateTransform(TransformComponent &transform, float dt) {
+  transform.position = Vector3Add(transform.position, transform.velocity * dt);
+  if (transform.position.x > gridSizeHalfF) {
+    transform.position.x = gridSizeHalfF;
+    transform.velocity.x *= -1;
+  }
+  if (transform.position.z > gridSizeHalfF) {
+    transform.position.z = gridSizeHalfF;
+    transform.velocity.z *= -1;
+  }
+  if (transform.position.x < -gridSizeHalfF) {
+    transform.position.x = -gridSizeHalfF;
+    transform.velocity.x *= -1;
+  }
+  if (transform.position.z < -gridSizeHalfF) {
+    transform.position.z = -gridSizeHalfF;
+    transform.velocity.z *= -1;
+  }
+}
+
+void spawnEntity(flecs::world &ecs, EntityType type, Vector3 position) {
+  ecs.entity()
+      .set<TransformComponent>(
+          {position, Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)}})
+      .set<EntityType>(type)
+      .set<SpawnComponent>({spawnFrequency, maxEnergy});
+}
+
+void updateSpawnComponent(flecs::world &ecs, flecs::entity &e, SpawnComponent &spawnComponent, float dt) {
+  if (spawnComponent.spawnTime < 0 && spawnComponent.energy > maxEnergy * 0.5f) {
+    spawnComponent.spawnTime = spawnFrequency;
+    spawnComponent.energy -= maxEnergy * 0.5f;
+    // TODO fix crash
+    // spawnEntity(ecs, e.get<EntityType>(), e.get<TransformComponent>().position);
+  } else {
+    spawnComponent.spawnTime -= dt;
+  }
+}
+
+void updatePredatorBehavior(flecs::world &ecs, flecs::entity& predator, float dt) {
+  TransformComponent &transform = predator.get_mut<TransformComponent>();
+  SpawnComponent &spawn = predator.get_mut<SpawnComponent>();
+
+  float minDist = 1e6f;
+  flecs::entity* closestPrey = nullptr;
+  ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType) {
+    if (entityType == EntityType::PREY) {
+      const TransformComponent& preyTransform = e.get<TransformComponent>();
+      float dist = Vector3Distance(transform.position, preyTransform.position);
+      if (dist < minDist) {
+        minDist = dist;
+        closestPrey = &e;
+      }
     }
+  });
+
+  if (closestPrey != nullptr) {
+    const TransformComponent &preyTransformComponent = closestPrey->get<TransformComponent>();
+    Vector3 dir = Vector3Subtract(preyTransformComponent.position, transform.position);
+    float dist = Vector3Length(dir);
+    if (dist > 1.0f) {
+      dir = Vector3Scale(Vector3Normalize(dir), speed);
+      transform.velocity.x = dir.x;
+      transform.velocity.z = dir.z;
+      spawn.energy -= dt * predatorEnergyLossFactor;
+    } else if (dist < 1.0f) {
+      SpawnComponent &prey = closestPrey->get_mut<SpawnComponent>();
+      prey.energy = 0;
+      spawn.energy += maxEnergy * 0.5f;
+    }
+  } else {
+    spawn.energy -= dt * predatorEnergyLossFactor;
+  }
 }
 
-int main(void)
-{
-    flecs::world ecs;
-    std::srand((unsigned int)std::time({}));
-    const int screenWidth = 1600;
-    const int screenHeight = 1200;
+int main(void) {
+  flecs::world ecs;
+  std::srand((unsigned int)std::time({}));
+  const int screenWidth = 1600;
+  const int screenHeight = 1200;
 
-    InitWindow(screenWidth, screenHeight, "predator prey");
+  InitWindow(screenWidth, screenHeight, "predator prey");
 
-    Camera3D camera = {0};
-    camera.position = Vector3{0.0f, 10.0f, 10.0f};
-    camera.target = Vector3{0.0f, 0.0f, 0.0f};
-    camera.up = Vector3{0.0f, 1.0f, 0.0f};
-    camera.fovy = 45.0f;
-    camera.projection = CAMERA_PERSPECTIVE;
+  Camera3D camera = {0};
+  camera.position = Vector3{0.0f, 10.0f, 10.0f};
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};
+  camera.up = Vector3{0.0f, 1.0f, 0.0f};
+  camera.fovy = 45.0f;
+  camera.projection = CAMERA_PERSPECTIVE;
 
-    DisableCursor();
-    SetTargetFPS(60);
+  DisableCursor();
+  SetTargetFPS(60);
 
-    float gridSizeF = (float)gridSize;
-    float gridSizeHalfF = (float)gridSize / 2.f;
-    std::vector<Entity> entities;
-    initializeEntities(entities, gridSize, gridSizeHalfF);
+  initializeEntities(ecs, gridSize);
 
-    auto updateEntity = [&](Entity &entity, float dt, float gridSizeHalfF)
-    {
-        entity.position = Vector3Add(entity.position, entity.velocity * dt);
-        if (entity.position.x > gridSizeHalfF)
-        {
-            entity.position.x = gridSizeHalfF;
-            entity.velocity.x *= -1;
-        }
-        if (entity.position.z > gridSizeHalfF)
-        {
-            entity.position.z = gridSizeHalfF;
-            entity.velocity.z *= -1;
-        }
-        if (entity.position.x < -gridSizeHalfF)
-        {
-            entity.position.x = -gridSizeHalfF;
-            entity.velocity.x *= -1;
-        }
-        if (entity.position.z < -gridSizeHalfF)
-        {
-            entity.position.z = -gridSizeHalfF;
-            entity.velocity.z *= -1;
-        }
-    };
-
-    auto handleSpawning = [&](Entity &entity, std::vector<Entity> &entities)
-    {
-        if (entity.spawnTime < 0 && entity.energy > maxEnergy * 0.5f)
-        {
-            Entity offspring = spawnEntity(entity.position, entity.type);
-            offspring.spawnTime = spawnFrequency;
-            entity.spawnTime = spawnFrequency;
-            entities.push_back(offspring);
-        }
-        else
-        {
-            entity.spawnTime -= GetFrameTime();
-        }
-    };
-
-    auto handlePredatorBehavior = [&](Entity &entity, std::vector<Entity> &entities, float dt)
-    {
-        if (entity.type != EntityType::PREDATOR)
-            return;
-        float minDist = 1e6f;
-        int closestPreyIdx = -1;
-        for (size_t j = 0; j < entities.size(); ++j)
-        {
-            if (entities[j].type == EntityType::PREY)
-            {
-                float dist = Vector3Distance(entity.position, entities[j].position);
-                if (dist < minDist)
-                {
-                    minDist = dist;
-                    closestPreyIdx = (int)j;
-                }
-            }
-        }
-        if (closestPreyIdx != -1)
-        {
-            Entity &prey = entities[closestPreyIdx];
-            Vector3 dir = Vector3Subtract(prey.position, entity.position);
-            float dist = Vector3Length(dir);
-            if (dist > 1.0f)
-            {
-                dir = Vector3Scale(Vector3Normalize(dir), speed);
-                entity.velocity.x = dir.x;
-                entity.velocity.z = dir.z;
-                entity.energy -= dt * predatorEnergyLossFactor;
-            }
-            else if (dist < 1.0f)
-            {
-                prey.energy = 0;
-                entity.energy += maxEnergy * 0.5f;
-            }
-        }
-        else
-        {
-            entity.energy -= dt * predatorEnergyLossFactor;
-        }
-    };
-
-    auto removeDeadEntities = [&](std::vector<Entity> &entities)
-    {
-        for (auto it = entities.begin(); it != entities.end();)
-        {
-            if (it->energy <= 0)
-            {
-                it = entities.erase(it);
-            }
-            else
-            {
-                ++it;
-            }
-        }
-    };
-
-    while (!WindowShouldClose())
-    {
-        if (IsKeyPressed(KEY_R))
-        {
-            entities.clear();
-            initializeEntities(entities, gridSize, gridSizeHalfF);
-        }
-        float dt = GetFrameTime();
-        for (int i = 0; i < entities.size(); i++)
-        {
-            updateEntity(entities[i], dt, gridSizeHalfF);
-            handleSpawning(entities[i], entities);
-            handlePredatorBehavior(entities[i], entities, dt);
-        }
-        removeDeadEntities(entities);
-
-        UpdateCamera(&camera, CAMERA_FIRST_PERSON);
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
-        BeginMode3D(camera);
-        for (Entity entity : entities)
-        {
-            DrawCube(entity.position, 1.0f, 1.0f, 1.0f, entity.type == EntityType::PREDATOR ? RED : GREEN);
-            DrawCubeWires(entity.position, 1.0f, 1.0f, 1.0f, entity.type == EntityType::PREDATOR ? MAROON : LIME);
-        }
-        DrawGrid(gridSize, 1.0f);
-        EndMode3D();
-        DrawText("Welcome to the third dimension!", 10, 40, 20, DARKGRAY);
-        DrawFPS(10, 10);
-        EndDrawing();
+  while (!WindowShouldClose()) {
+    if (IsKeyPressed(KEY_R)) {
+      ecs.reset();
+      initializeEntities(ecs, gridSize);
     }
-    CloseWindow();
-    return 0;
+    float dt = GetFrameTime();
+    ecs.progress(dt);
+    
+    ecs.query<TransformComponent>().each([&](flecs::entity e, TransformComponent &transformComponent) {
+      updateTransform(transformComponent, dt);
+    });
+    ecs.query<SpawnComponent>().each([&](flecs::entity e, SpawnComponent &spawnComponent) {
+      updateSpawnComponent(ecs, e, spawnComponent, dt);
+    });
+
+    // TODO fix crash
+    // ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType) {
+    //   if(entityType == EntityType::PREDATOR){
+    //     updatePredatorBehavior(ecs, e, dt);
+    //   }
+    // });
+    
+    ecs.query<SpawnComponent>().each([&](flecs::entity e, SpawnComponent &spawnComponent) {
+      if(spawnComponent.energy <= 0) {
+        e.destruct();
+      }
+    });
+
+    UpdateCamera(&camera, CAMERA_FIRST_PERSON);
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
+    BeginMode3D(camera);
+
+    ecs.query<TransformComponent>().each([&](flecs::entity e, TransformComponent &transformComponent) {
+      EntityType type = e.get<EntityType>();
+      DrawCube(transformComponent.position, 1.0f, 1.0f, 1.0f,
+               type == EntityType::PREDATOR ? RED : GREEN);
+      DrawCubeWires(transformComponent.position, 1.0f, 1.0f, 1.0f,
+                    type == EntityType::PREDATOR ? MAROON : LIME);
+    });
+
+    DrawGrid(gridSize, 1.0f);
+    EndMode3D();
+    DrawText("Welcome to the third dimension!", 10, 40, 20, DARKGRAY);
+    DrawFPS(10, 10);
+    EndDrawing();
+  }
+  CloseWindow();
+  return 0;
 }
