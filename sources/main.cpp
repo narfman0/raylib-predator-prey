@@ -2,7 +2,8 @@
 #include <vector>
 #include <ctime>
 
-#include "raylib.h"
+#include <flecs.h>
+#include <raylib.h>
 #include <raymath.h>
 
 int gridSize = 50;
@@ -39,6 +40,7 @@ void initializeEntities(std::vector<Entity>& entities, int count, float gridSize
 
 int main(void)
 {
+    flecs::world ecs;
     std::srand((unsigned int)std::time({}));
     const int screenWidth = 1600;
     const int screenHeight = 1200;
