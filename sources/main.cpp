@@ -1,37 +1,37 @@
-#include <string>
 #include "raylib.h"
-
-#define SCREEN_WIDTH (1600)
-#define SCREEN_HEIGHT (1200)
-
-#define WINDOW_TITLE "Window title"
 
 int main(void)
 {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE);
-    SetTargetFPS(60);
+    const int screenWidth = 1600;
+    const int screenHeight = 1200;
 
-    std::string texturePath = ASSETS_PATH + std::string{"test.png"};
-    Texture2D texture = LoadTexture(texturePath.c_str());
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - predator prey");
+
+    Camera3D camera = { 0 };
+    camera.position = Vector3{ 0.0f, 10.0f, 10.0f };
+    camera.target = Vector3{ 0.0f, 0.0f, 0.0f };
+    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };
+    camera.fovy = 45.0f;
+    camera.projection = CAMERA_PERSPECTIVE;
+    Vector3 cubePosition = { 0.0f, 0.0f, 0.0f };
+
+    DisableCursor();
+    SetTargetFPS(60);
 
     while (!WindowShouldClose())
     {
+        UpdateCamera(&camera, CAMERA_FIRST_PERSON);
         BeginDrawing();
-
-        ClearBackground(RAYWHITE);
-
-        const int texture_x = SCREEN_WIDTH / 2 - texture.width / 2;
-        const int texture_y = SCREEN_HEIGHT / 2 - texture.height / 2;
-        DrawTexture(texture, texture_x, texture_y, WHITE);
-
-        const char* text = "OMG! IT WORKS!";
-        const Vector2 text_size = MeasureTextEx(GetFontDefault(), text, 20, 1);
-        DrawText(text, SCREEN_WIDTH / 2 - text_size.x / 2, texture_y + texture.height + text_size.y + 10, 20, BLACK);
-
+            ClearBackground(RAYWHITE);
+            BeginMode3D(camera);
+                DrawCube(cubePosition, 2.0f, 2.0f, 2.0f, RED);
+                DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
+                DrawGrid(100, 1.0f);
+            EndMode3D();
+            DrawText("Welcome to the third dimension!", 10, 40, 20, DARKGRAY);
+            DrawFPS(10, 10);
         EndDrawing();
     }
-
     CloseWindow();
-
     return 0;
 }
