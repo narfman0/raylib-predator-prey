@@ -9,7 +9,7 @@ int gridSize = 50;
 float speed = 2.0f;
 float maxEnergy = 10.0f;
 float spawnFrequency = 10.0f;
-float predatorEnergyLossFactor = 0.5f;
+float predatorEnergyLossFactor = 0.7f;
 
 enum EntityType {PREDATOR, PREY};
 struct Entity{
@@ -17,7 +17,7 @@ struct Entity{
     Vector3 velocity;
     EntityType type;
     float spawnTime = spawnFrequency;
-    float energy = 1;
+    float energy = maxEnergy;
 };
 
 inline float randRange(float min, float max){
@@ -87,7 +87,7 @@ int main(void)
                 entity.velocity.z *= -1;
             }
             // Spawn offspring only when spawnTime < 0, and frequency is tied to spawnFrequency
-            if (entity.spawnTime < 0) {
+            if (entity.spawnTime < 0 && entity.energy > maxEnergy * 0.5f) {
                 Entity offspring = spawnEntity(entity.position, entity.type);
                 offspring.spawnTime = spawnFrequency; // reset timer for offspring
                 entity.spawnTime = spawnFrequency; // reset timer for parent
@@ -121,14 +121,17 @@ int main(void)
                         prey.energy = 0;
                         entity.energy += maxEnergy * 0.5f;
                     }
+                }else{
+                    entity.energy -= dt * predatorEnergyLossFactor;
                 }
             }
         }
         // Remove dead entities
-        for(auto it = entities.begin(); it != entities.end(); it++) {
+        for(auto it = entities.begin(); it != entities.end();) {
             if(it->energy <= 0){
-                entities.erase(it);
-                break; // TODO this is a hack to avoid iterator invalidation, fix later
+                it = entities.erase(it);
+            }else{
+                ++it;
             }
         }
 
