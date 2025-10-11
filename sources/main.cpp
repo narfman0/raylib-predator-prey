@@ -1,3 +1,4 @@
+#include <list>
 #include <vector>
 #include <ctime>
 
@@ -7,14 +8,15 @@
 int gridSize = 50;
 float speed = 2.0f;
 float maxEnergy = 10.0f;
+float spawnFrequency = 10.0f;
 
 enum EntityType {PREDATOR, PREY};
 struct Entity{
     Vector3 position;
     Vector3 velocity;
     EntityType type;
-    float spawnTime;
-    float energy;
+    float spawnTime = spawnFrequency;
+    float energy = 1;
 };
 
 inline float randRange(float min, float max){
@@ -23,6 +25,15 @@ inline float randRange(float min, float max){
 
 Entity spawnEntity(Vector3 pos, EntityType type){
     return Entity(Vector3{pos}, Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)}, type);
+}
+
+void initializeEntities(std::vector<Entity>& entities, int count, float gridSizeHalfF) {
+    for(int i=0; i<count; i++){
+        Vector3 pos{randRange(-gridSizeHalfF, gridSizeHalfF), 0, randRange(-gridSizeHalfF, gridSizeHalfF)};
+        Vector3 vel{randRange(-speed, speed), 0, randRange(-speed, speed)};
+        EntityType type = i % 4 == 0 ? EntityType::PREDATOR : EntityType::PREY;
+        entities.emplace_back(pos, vel, type);
+    }
 }
 
 int main(void)
@@ -47,18 +58,16 @@ int main(void)
     float gridSizeF = (float)gridSize;
     float gridSizeHalfF = (float)gridSize/2.f;
     std::vector<Entity> entities;
-    for(int i=0; i<gridSize; i++){
-        Vector3 pos{randRange(-gridSizeHalfF, gridSizeHalfF), 0, randRange(-gridSizeHalfF, gridSizeHalfF)};
-        Vector3 vel{randRange(-speed, speed), 0, randRange(-speed, speed)};
-        EntityType type = i % 4 == 0 ? EntityType::PREDATOR : EntityType::PREY;
-        entities.emplace_back(pos, vel, type);
-    }
+    initializeEntities(entities, gridSize, gridSizeHalfF);
 
-    while (!WindowShouldClose())
-    {
+    while (!WindowShouldClose()) {
+        if(IsKeyPressed(KEY_R)) {
+            entities.clear();
+            initializeEntities(entities, gridSize, gridSizeHalfF);
+        }
         float dt = GetFrameTime();
-        for(std::vector<Entity>::iterator it = entities.begin(); it != entities.end(); it++){
-            Entity& entity = *it;
+        for(int i=0; i<entities.size(); i++){
+            Entity& entity = entities[i];
             entity.position = Vector3Add(entity.position, entity.velocity*dt);
             if(entity.position.x > gridSizeHalfF){
                 entity.position.x = gridSizeHalfF;
@@ -76,10 +85,52 @@ int main(void)
                 entity.position.z = -gridSizeHalfF;
                 entity.velocity.z *= -1;
             }
-            // TODO get closest non-type
-            // TODO spawn offspring of same type
+            // Spawn offspring only when spawnTime < 0, and frequency is tied to spawnFrequency
+            if (entity.spawnTime < 0) {
+                Entity offspring = spawnEntity(entity.position, entity.type);
+                offspring.spawnTime = spawnFrequency; // reset timer for offspring
+                entity.spawnTime = spawnFrequency; // reset timer for parent
+                entities.push_back(offspring);
+            } else {
+                entity.spawnTime -= dt;
+            }
+            // Predators chase and kill prey
+            if (entity.type == EntityType::PREDATOR) {
+                float minDist = 1e6f;
+                int closestPreyIdx = -1;
+                for (size_t j = 0; j < entities.size(); ++j) {
+                    if (entities[j].type == EntityType::PREY) {
+                        float dist = Vector3Distance(entity.position, entities[j].position);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestPreyIdx = (int)j;
+                        }
+                    }
+                }
+                if (closestPreyIdx != -1) {
+                    Entity& prey = entities[closestPreyIdx];
+                    Vector3 dir = Vector3Subtract(prey.position, entity.position);
+                    float dist = Vector3Length(dir);
+                    if (dist > 1.0f) {
+                        dir = Vector3Scale(Vector3Normalize(dir), speed);
+                        entity.velocity.x = dir.x;
+                        entity.velocity.z = dir.z;
+                    }else if (dist < 1.0f) {
+                        prey.energy = 0;
+                    }
+                }
+            }
+            // TODO prey flee predators
+            // TODO lose energy over time, gain energy on kill, die at 0
         }
-
+        // Remove dead entities
+        // for(auto it = entities.begin(); it != entities.end();) {
+        //     if(it->energy <= 0){
+        //         entities.erase(it);
+        //     }else{
+        //         it++;
+        //     }
+        // }
 
         UpdateCamera(&camera, CAMERA_FIRST_PERSON);
         BeginDrawing();
