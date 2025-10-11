@@ -61,72 +61,69 @@ int main(void)
     std::vector<Entity> entities;
     initializeEntities(entities, gridSize, gridSizeHalfF);
 
-    while (!WindowShouldClose()) {
-        if(IsKeyPressed(KEY_R)) {
-            entities.clear();
-            initializeEntities(entities, gridSize, gridSizeHalfF);
+    auto updateEntity = [&](Entity& entity, float dt, float gridSizeHalfF) {
+        entity.position = Vector3Add(entity.position, entity.velocity*dt);
+        if(entity.position.x > gridSizeHalfF){
+            entity.position.x = gridSizeHalfF;
+            entity.velocity.x *= -1;
         }
-        float dt = GetFrameTime();
-        for(int i=0; i<entities.size(); i++){
-            Entity& entity = entities[i];
-            entity.position = Vector3Add(entity.position, entity.velocity*dt);
-            if(entity.position.x > gridSizeHalfF){
-                entity.position.x = gridSizeHalfF;
-                entity.velocity.x *= -1;
-            }
-            if(entity.position.z > gridSizeHalfF){
-                entity.position.z = gridSizeHalfF;
-                entity.velocity.z *= -1;
-            }
-            if(entity.position.x < -gridSizeHalfF){
-                entity.position.x = -gridSizeHalfF;
-                entity.velocity.x *= -1;
-            }
-            if(entity.position.z < -gridSizeHalfF){
-                entity.position.z = -gridSizeHalfF;
-                entity.velocity.z *= -1;
-            }
-            // Spawn offspring only when spawnTime < 0, and frequency is tied to spawnFrequency
-            if (entity.spawnTime < 0 && entity.energy > maxEnergy * 0.5f) {
-                Entity offspring = spawnEntity(entity.position, entity.type);
-                offspring.spawnTime = spawnFrequency; // reset timer for offspring
-                entity.spawnTime = spawnFrequency; // reset timer for parent
-                entities.push_back(offspring);
-            } else {
-                entity.spawnTime -= dt;
-            }
-            // Predators chase and kill prey
-            if (entity.type == EntityType::PREDATOR) {
-                float minDist = 1e6f;
-                int closestPreyIdx = -1;
-                for (size_t j = 0; j < entities.size(); ++j) {
-                    if (entities[j].type == EntityType::PREY) {
-                        float dist = Vector3Distance(entity.position, entities[j].position);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            closestPreyIdx = (int)j;
-                        }
-                    }
-                }
-                if (closestPreyIdx != -1) {
-                    Entity& prey = entities[closestPreyIdx];
-                    Vector3 dir = Vector3Subtract(prey.position, entity.position);
-                    float dist = Vector3Length(dir);
-                    if (dist > 1.0f) {
-                        dir = Vector3Scale(Vector3Normalize(dir), speed);
-                        entity.velocity.x = dir.x;
-                        entity.velocity.z = dir.z;
-                        entity.energy -= dt * predatorEnergyLossFactor;
-                    }else if (dist < 1.0f) {
-                        prey.energy = 0;
-                        entity.energy += maxEnergy * 0.5f;
-                    }
-                }else{
-                    entity.energy -= dt * predatorEnergyLossFactor;
+        if(entity.position.z > gridSizeHalfF){
+            entity.position.z = gridSizeHalfF;
+            entity.velocity.z *= -1;
+        }
+        if(entity.position.x < -gridSizeHalfF){
+            entity.position.x = -gridSizeHalfF;
+            entity.velocity.x *= -1;
+        }
+        if(entity.position.z < -gridSizeHalfF){
+            entity.position.z = -gridSizeHalfF;
+            entity.velocity.z *= -1;
+        }
+    };
+
+    auto handleSpawning = [&](Entity& entity, std::vector<Entity>& entities) {
+        if (entity.spawnTime < 0 && entity.energy > maxEnergy * 0.5f) {
+            Entity offspring = spawnEntity(entity.position, entity.type);
+            offspring.spawnTime = spawnFrequency;
+            entity.spawnTime = spawnFrequency;
+            entities.push_back(offspring);
+        } else {
+            entity.spawnTime -= GetFrameTime();
+        }
+    };
+
+    auto handlePredatorBehavior = [&](Entity& entity, std::vector<Entity>& entities, float dt) {
+        if (entity.type != EntityType::PREDATOR) return;
+        float minDist = 1e6f;
+        int closestPreyIdx = -1;
+        for (size_t j = 0; j < entities.size(); ++j) {
+            if (entities[j].type == EntityType::PREY) {
+                float dist = Vector3Distance(entity.position, entities[j].position);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestPreyIdx = (int)j;
                 }
             }
         }
-        // Remove dead entities
+        if (closestPreyIdx != -1) {
+            Entity& prey = entities[closestPreyIdx];
+            Vector3 dir = Vector3Subtract(prey.position, entity.position);
+            float dist = Vector3Length(dir);
+            if (dist > 1.0f) {
+                dir = Vector3Scale(Vector3Normalize(dir), speed);
+                entity.velocity.x = dir.x;
+                entity.velocity.z = dir.z;
+                entity.energy -= dt * predatorEnergyLossFactor;
+            }else if (dist < 1.0f) {
+                prey.energy = 0;
+                entity.energy += maxEnergy * 0.5f;
+            }
+        }else{
+            entity.energy -= dt * predatorEnergyLossFactor;
+        }
+    };
+
+    auto removeDeadEntities = [&](std::vector<Entity>& entities) {
         for(auto it = entities.begin(); it != entities.end();) {
             if(it->energy <= 0){
                 it = entities.erase(it);
@@ -134,6 +131,20 @@ int main(void)
                 ++it;
             }
         }
+    };
+
+    while (!WindowShouldClose()) {
+        if(IsKeyPressed(KEY_R)) {
+            entities.clear();
+            initializeEntities(entities, gridSize, gridSizeHalfF);
+        }
+        float dt = GetFrameTime();
+        for(int i=0; i<entities.size(); i++){
+            updateEntity(entities[i], dt, gridSizeHalfF);
+            handleSpawning(entities[i], entities);
+            handlePredatorBehavior(entities[i], entities, dt);
+        }
+        removeDeadEntities(entities);
 
         UpdateCamera(&camera, CAMERA_FIRST_PERSON);
         BeginDrawing();
