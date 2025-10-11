@@ -63,32 +63,36 @@ void updateTransform(TransformComponent &transform, float dt) {
 
 void spawnEntity(flecs::world &ecs, EntityType type, Vector3 position) {
   ecs.entity()
-      .set<TransformComponent>(
-          {position, Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)}})
+      .set<TransformComponent>({position, Vector3{randRange(-speed, speed), 0,
+                                                  randRange(-speed, speed)}})
       .set<EntityType>(type)
       .set<SpawnComponent>({spawnFrequency, maxEnergy});
 }
 
-void updateSpawnComponent(flecs::world &ecs, flecs::entity &e, SpawnComponent &spawnComponent, float dt) {
-  if (spawnComponent.spawnTime < 0 && spawnComponent.energy > maxEnergy * 0.5f) {
+void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
+                          SpawnComponent &spawnComponent, float dt) {
+  if (spawnComponent.spawnTime < 0 &&
+      spawnComponent.energy > maxEnergy * 0.5f) {
     spawnComponent.spawnTime = spawnFrequency;
     spawnComponent.energy -= maxEnergy * 0.5f;
     // TODO fix crash
-    // spawnEntity(ecs, e.get<EntityType>(), e.get<TransformComponent>().position);
+    // spawnEntity(ecs, e.get<EntityType>(),
+    // e.get<TransformComponent>().position);
   } else {
     spawnComponent.spawnTime -= dt;
   }
 }
 
-void updatePredatorBehavior(flecs::world &ecs, flecs::entity& predator, float dt) {
+void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
+                            float dt) {
   TransformComponent &transform = predator.get_mut<TransformComponent>();
   SpawnComponent &spawn = predator.get_mut<SpawnComponent>();
 
   float minDist = 1e6f;
-  flecs::entity* closestPrey = nullptr;
+  flecs::entity *closestPrey = nullptr;
   ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType) {
     if (entityType == EntityType::PREY) {
-      const TransformComponent& preyTransform = e.get<TransformComponent>();
+      const TransformComponent &preyTransform = e.get<TransformComponent>();
       float dist = Vector3Distance(transform.position, preyTransform.position);
       if (dist < minDist) {
         minDist = dist;
@@ -98,8 +102,10 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity& predator, float dt
   });
 
   if (closestPrey != nullptr) {
-    const TransformComponent &preyTransformComponent = closestPrey->get<TransformComponent>();
-    Vector3 dir = Vector3Subtract(preyTransformComponent.position, transform.position);
+    const TransformComponent &preyTransformComponent =
+        closestPrey->get<TransformComponent>();
+    Vector3 dir =
+        Vector3Subtract(preyTransformComponent.position, transform.position);
     float dist = Vector3Length(dir);
     if (dist > 1.0f) {
       dir = Vector3Scale(Vector3Normalize(dir), speed);
@@ -143,39 +149,44 @@ int main(void) {
     }
     float dt = GetFrameTime();
     ecs.progress(dt);
-    
-    ecs.query<TransformComponent>().each([&](flecs::entity e, TransformComponent &transformComponent) {
-      updateTransform(transformComponent, dt);
-    });
-    ecs.query<SpawnComponent>().each([&](flecs::entity e, SpawnComponent &spawnComponent) {
-      updateSpawnComponent(ecs, e, spawnComponent, dt);
-    });
+
+    ecs.query<TransformComponent>().each(
+        [&](flecs::entity e, TransformComponent &transformComponent) {
+          updateTransform(transformComponent, dt);
+        });
+    ecs.query<SpawnComponent>().each(
+        [&](flecs::entity e, SpawnComponent &spawnComponent) {
+          updateSpawnComponent(ecs, e, spawnComponent, dt);
+        });
 
     // TODO fix crash
-    // ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType) {
+    // ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType)
+    // {
     //   if(entityType == EntityType::PREDATOR){
     //     updatePredatorBehavior(ecs, e, dt);
     //   }
     // });
-    
-    ecs.query<SpawnComponent>().each([&](flecs::entity e, SpawnComponent &spawnComponent) {
-      if(spawnComponent.energy <= 0) {
-        e.destruct();
-      }
-    });
+
+    ecs.query<SpawnComponent>().each(
+        [&](flecs::entity e, SpawnComponent &spawnComponent) {
+          if (spawnComponent.energy <= 0) {
+            e.destruct();
+          }
+        });
 
     UpdateCamera(&camera, CAMERA_FIRST_PERSON);
     BeginDrawing();
     ClearBackground(RAYWHITE);
     BeginMode3D(camera);
 
-    ecs.query<TransformComponent>().each([&](flecs::entity e, TransformComponent &transformComponent) {
-      EntityType type = e.get<EntityType>();
-      DrawCube(transformComponent.position, 1.0f, 1.0f, 1.0f,
-               type == EntityType::PREDATOR ? RED : GREEN);
-      DrawCubeWires(transformComponent.position, 1.0f, 1.0f, 1.0f,
-                    type == EntityType::PREDATOR ? MAROON : LIME);
-    });
+    ecs.query<TransformComponent>().each(
+        [&](flecs::entity e, TransformComponent &transformComponent) {
+          EntityType type = e.get<EntityType>();
+          DrawCube(transformComponent.position, 1.0f, 1.0f, 1.0f,
+                   type == EntityType::PREDATOR ? RED : GREEN);
+          DrawCubeWires(transformComponent.position, 1.0f, 1.0f, 1.0f,
+                        type == EntityType::PREDATOR ? MAROON : LIME);
+        });
 
     DrawGrid(gridSize, 1.0f);
     EndMode3D();
