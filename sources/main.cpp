@@ -39,6 +39,7 @@ static void initialize(flecs::world &ecs) {
       .each([&ecs](flecs::entity entity, PredatorTag &) {
         updatePredatorBehavior(ecs, entity);
       });
+  ecs.set_threads(8);
   spdlog::info("World initialized!");
 }
 
@@ -91,6 +92,8 @@ int main(void) {
     DrawText(std::format("Predators: {}", ecs.count<PredatorTag>()).c_str(), 10,
              80, 20, DARKGRAY);
     DrawText(std::format("Prey: {}", ecs.count<PreyTag>()).c_str(), 10, 120, 20,
+             DARKGRAY);
+    DrawText(std::format("Threads: {}", ecs.get_threads()).c_str(), 10, 160, 20,
              DARKGRAY);
     DrawFPS(10, 10);
     EndDrawing();
