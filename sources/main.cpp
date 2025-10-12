@@ -13,7 +13,8 @@ float predatorEnergyLossFactor = 0.7f;
 float gridSizeF = (float)gridSize;
 float gridSizeHalfF = (float)gridSize / 2.f;
 
-enum EntityType { PREDATOR, PREY };
+struct PredatorTag {bool filler;};
+struct PreyTag {bool filler;};
 struct TransformComponent {
   Vector3 position;
   Vector3 velocity;
@@ -30,13 +31,17 @@ inline float randRange(float min, float max) {
 
 void initializeEntities(flecs::world &ecs, int count) {
   for (int i = 0; i < count; i++) {
-    ecs.entity()
+    auto entity = ecs.entity()
         .set<TransformComponent>(
             {Vector3{randRange(-gridSizeHalfF, gridSizeHalfF), 0,
                      randRange(-gridSizeHalfF, gridSizeHalfF)},
              Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)}})
-        .set<EntityType>(i % 4 == 0 ? EntityType::PREDATOR : EntityType::PREY)
         .set<SpawnComponent>({spawnFrequency, maxEnergy});
+    if (i % 4 == 0) {
+      entity.add<PredatorTag>();
+    } else {
+      entity.add<PreyTag>();
+    }
   }
 }
 
@@ -60,14 +65,6 @@ void updateTransform(TransformComponent &transform) {
   }
 }
 
-void spawnEntity(flecs::world &ecs, EntityType type, Vector3 position) {
-  ecs.entity()
-      .set<TransformComponent>({position, Vector3{randRange(-speed, speed), 0,
-                                                  randRange(-speed, speed)}})
-      .set<EntityType>(type)
-      .set<SpawnComponent>({spawnFrequency, maxEnergy});
-}
-
 void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
                           SpawnComponent &spawnComponent) {
   if (spawnComponent.spawnTime < 0 &&
@@ -76,11 +73,15 @@ void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
     spawnComponent.energy -= maxEnergy * 0.5f;
     auto deferredSpawn = [&ecs, &e]()
     {
-      ecs.entity()
+      auto entity = ecs.entity()
           .set<TransformComponent>({e.get<TransformComponent>().position, Vector3{randRange(-speed, speed), 0,
                                                                                   randRange(-speed, speed)}})
-          .set<EntityType>(e.get<EntityType>())
           .set<SpawnComponent>({spawnFrequency, maxEnergy});
+      if (e.has<PredatorTag>()) {
+        entity.add<PredatorTag>();
+      } else {
+        entity.add<PreyTag>();
+      }
     };
     ecs.defer(deferredSpawn);
   } else {
@@ -96,15 +97,13 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
   float minDist = 1e6f;
   flecs::entity closestPrey;
   Vector3 *closestPreyPosition = nullptr;
-  ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType){
+  ecs.query<PreyTag>().each([&](flecs::entity e, PreyTag &preyTag) {
     TransformComponent &preyTransform = e.get_mut<TransformComponent>();
-    if (entityType == EntityType::PREY) {
-      float dist = Vector3Distance(transform.position, preyTransform.position);
-      if (dist < minDist) {
-        minDist = dist;
-        closestPrey = e;
-        closestPreyPosition = &preyTransform.position;
-      }
+    float dist = Vector3Distance(transform.position, preyTransform.position);
+    if (dist < minDist) {
+      minDist = dist;
+      closestPrey = e;
+      closestPreyPosition = &preyTransform.position;
     } });
 
   if (closestPreyPosition != nullptr) {
@@ -157,13 +156,10 @@ int main(void) {
       .kind(flecs::OnUpdate)
       .each([](flecs::entity e, TransformComponent &transformComponent)
             { updateTransform(transformComponent); });
-  ecs.system<EntityType>()
+  ecs.system<PredatorTag>()
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity e, EntityType &entityType)
-            { 
-      if(entityType == EntityType::PREDATOR){
-        updatePredatorBehavior(ecs, e);
-      } });
+      .each([&ecs](flecs::entity e, PredatorTag &tag)
+            { updatePredatorBehavior(ecs, e); });
 
   while (!WindowShouldClose()) {
     if (IsKeyPressed(KEY_R)) {
@@ -179,11 +175,11 @@ int main(void) {
 
     ecs.query<TransformComponent>().each(
         [&](flecs::entity e, TransformComponent &transformComponent) {
-          EntityType type = e.get<EntityType>();
+          bool isPredator = e.has<PredatorTag>();
           DrawCube(transformComponent.position, 1.0f, 1.0f, 1.0f,
-                   type == EntityType::PREDATOR ? RED : GREEN);
+                   isPredator ? RED : GREEN);
           DrawCubeWires(transformComponent.position, 1.0f, 1.0f, 1.0f,
-                        type == EntityType::PREDATOR ? MAROON : LIME);
+                        isPredator ? MAROON : LIME);
         });
 
     DrawGrid(gridSize, 1.0f);
