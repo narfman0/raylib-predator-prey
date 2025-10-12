@@ -1,4 +1,7 @@
 #include "systems.h"
+
+#include "components.h"
+#include "globals.h"
 #include "util.h"
 
 void updateTransform(TransformComponent &transform) {
@@ -25,9 +28,9 @@ void updateTransform(TransformComponent &transform) {
 void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
                           SpawnComponent &spawnComponent) {
   if (spawnComponent.spawnTime < 0 &&
-      spawnComponent.energy > maxEnergy * 0.5f) {
+      spawnComponent.energy > maxEnergy * 0.5F) {
     spawnComponent.spawnTime = spawnFrequency;
-    spawnComponent.energy -= maxEnergy * 0.5f;
+    spawnComponent.energy -= maxEnergy * 0.5F;
     auto deferredSpawn = [&ecs, &e]() {
       auto pos = e.get<TransformComponent>().position;
       auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
@@ -48,33 +51,33 @@ void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
 
 void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
   float dt = GetFrameTime();
-  TransformComponent &transform = predator.get_mut<TransformComponent>();
-  SpawnComponent &spawn = predator.get_mut<SpawnComponent>();
+  auto &transform = predator.get_mut<TransformComponent>();
+  auto &spawn = predator.get_mut<SpawnComponent>();
 
-  float minDist = 1e6f;
+  float minDist = 1e6F;
   flecs::entity closestPrey;
   Vector3 *closestPreyPosition = nullptr;
-  ecs.query<PreyTag>().each([&](flecs::entity e, PreyTag &preyTag) {
-    TransformComponent &preyTransform = e.get_mut<TransformComponent>();
-    float dist = Vector3Distance(transform.position, preyTransform.position);
+  ecs.query<PreyTag>().each([&](flecs::entity entity, PreyTag &) {
+    auto &preyTransform = entity.get_mut<TransformComponent>();
+    const float dist =
+        Vector3Distance(transform.position, preyTransform.position);
     if (dist < minDist) {
       minDist = dist;
-      closestPrey = e;
+      closestPrey = entity;
       closestPreyPosition = &preyTransform.position;
     }
   });
 
   if (closestPreyPosition != nullptr) {
-    Vector3 dir = Vector3Subtract(*closestPreyPosition, transform.position);
-    float dist = Vector3Length(dir);
-    if (dist > 1.0f) {
+    if (minDist > 1.0F) {
+      Vector3 dir = Vector3Subtract(*closestPreyPosition, transform.position);
       dir = Vector3Scale(Vector3Normalize(dir), speed);
       transform.velocity.x = dir.x;
       transform.velocity.z = dir.z;
       spawn.energy -= dt * predatorEnergyLossFactor;
-    } else if (dist < 1.0f) {
+    } else {
       ecs.defer([closestPrey] { closestPrey.destruct(); });
-      spawn.energy += maxEnergy * 0.5f;
+      spawn.energy += maxEnergy * 0.5F;
     }
   } else {
     spawn.energy -= dt * predatorEnergyLossFactor;

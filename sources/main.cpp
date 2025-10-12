@@ -1,14 +1,15 @@
+#include <cstdlib>
 #include <ctime>
 
 #include <flecs.h>
 #include <raylib.h>
-#include <raymath.h>
 
 #include "components.h"
+#include "globals.h"
 #include "systems.h"
 #include "util.h"
 
-void initializeEntities(flecs::world &ecs, int count) {
+static void initializeEntities(flecs::world &ecs, int count) {
   for (int i = 0; i < count; i++) {
     auto pos = Vector3{randRange(-gridSizeHalfF, gridSizeHalfF), 0,
                        randRange(-gridSizeHalfF, gridSizeHalfF)};
@@ -29,7 +30,7 @@ int main(void) {
   const int screenHeight = 1200;
   InitWindow(screenWidth, screenHeight, "predator prey");
   DisableCursor();
-  SetTargetFPS(60);
+  SetTargetFPS(targetFps);
 
   flecs::world ecs;
   std::srand((unsigned int)std::time({}));
@@ -37,25 +38,25 @@ int main(void) {
 
   ecs.system<SpawnComponent>()
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity e, SpawnComponent &spawnComponent) {
-        updateSpawnComponent(ecs, e, spawnComponent);
+      .each([&ecs](flecs::entity entity, SpawnComponent &spawnComponent) {
+        updateSpawnComponent(ecs, entity, spawnComponent);
       });
   ecs.system<TransformComponent>()
       .kind(flecs::OnUpdate)
-      .each([](flecs::entity e, TransformComponent &transformComponent) {
+      .each([](flecs::entity, TransformComponent &transformComponent) {
         updateTransform(transformComponent);
       });
   ecs.system<PredatorTag>()
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity e, PredatorTag &tag) {
-        updatePredatorBehavior(ecs, e);
+      .each([&ecs](flecs::entity entity, PredatorTag &) {
+        updatePredatorBehavior(ecs, entity);
       });
 
   Camera3D camera = {0};
-  camera.position = Vector3{0.0f, 10.0f, 10.0f};
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};
-  camera.up = Vector3{0.0f, 1.0f, 0.0f};
-  camera.fovy = 45.0f;
+  camera.position = Vector3{0.0F, 10.0F, 10.0F};
+  camera.target = Vector3{0.0F, 0.0F, 0.0F};
+  camera.up = Vector3{0.0F, 1.F, 0.0F};
+  camera.fovy = 45.0F;
   camera.projection = CAMERA_PERSPECTIVE;
 
   while (!WindowShouldClose()) {
@@ -71,15 +72,15 @@ int main(void) {
     BeginMode3D(camera);
 
     ecs.query<TransformComponent>().each(
-        [&](flecs::entity e, TransformComponent &transformComponent) {
-          bool isPredator = e.has<PredatorTag>();
-          DrawCube(transformComponent.position, 1.0f, 1.0f, 1.0f,
+        [&](flecs::entity entity, TransformComponent &transformComponent) {
+          const bool isPredator = entity.has<PredatorTag>();
+          DrawCube(transformComponent.position, 1.0F, 1.0F, 1.0F,
                    isPredator ? RED : GREEN);
-          DrawCubeWires(transformComponent.position, 1.0f, 1.0f, 1.0f,
+          DrawCubeWires(transformComponent.position, 1.0F, 1.0F, 1.0F,
                         isPredator ? MAROON : LIME);
         });
 
-    DrawGrid(gridSize, 1.0f);
+    DrawGrid(gridSize, 1.0F);
     EndMode3D();
     DrawText("Welcome to the third dimension!", 10, 40, 20, DARKGRAY);
     DrawFPS(10, 10);
