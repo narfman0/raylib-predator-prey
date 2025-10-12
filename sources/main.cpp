@@ -1,28 +1,17 @@
+#include <cstdlib>
 #include <ctime>
-#include <vector>
 
 #include <flecs.h>
 #include <raylib.h>
 #include <raymath.h>
 
+#include "components.h"
+
 int gridSize = 25;
 float speed = 2.0f;
-float maxEnergy = 10.0f;
-float spawnFrequency = 4.0f;
 float predatorEnergyLossFactor = 0.7f;
 float gridSizeF = (float)gridSize;
 float gridSizeHalfF = (float)gridSize / 2.f;
-
-struct PredatorTag {bool filler;};
-struct PreyTag {bool filler;};
-struct TransformComponent {
-  Vector3 position;
-  Vector3 velocity;
-};
-struct SpawnComponent {
-  float spawnTime = spawnFrequency;
-  float energy = maxEnergy;
-};
 
 inline float randRange(float min, float max) {
   return min + static_cast<float>(rand()) /
@@ -129,23 +118,14 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
 }
 
 int main(void) {
-  flecs::world ecs;
-  std::srand((unsigned int)std::time({}));
   const int screenWidth = 1600;
   const int screenHeight = 1200;
-
   InitWindow(screenWidth, screenHeight, "predator prey");
-
-  Camera3D camera = {0};
-  camera.position = Vector3{0.0f, 10.0f, 10.0f};
-  camera.target = Vector3{0.0f, 0.0f, 0.0f};
-  camera.up = Vector3{0.0f, 1.0f, 0.0f};
-  camera.fovy = 45.0f;
-  camera.projection = CAMERA_PERSPECTIVE;
-
   DisableCursor();
   SetTargetFPS(60);
 
+  flecs::world ecs;
+  std::srand((unsigned int)std::time({}));
   initializeEntities(ecs, gridSize);
 
   ecs.system<SpawnComponent>()
@@ -160,6 +140,13 @@ int main(void) {
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity e, PredatorTag &tag)
             { updatePredatorBehavior(ecs, e); });
+
+  Camera3D camera = {0};
+  camera.position = Vector3{0.0f, 10.0f, 10.0f};
+  camera.target = Vector3{0.0f, 0.0f, 0.0f};
+  camera.up = Vector3{0.0f, 1.0f, 0.0f};
+  camera.fovy = 45.0f;
+  camera.projection = CAMERA_PERSPECTIVE;
 
   while (!WindowShouldClose()) {
     if (IsKeyPressed(KEY_R)) {
