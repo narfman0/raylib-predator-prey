@@ -25,6 +25,19 @@ void updateTransform(TransformComponent &transform) {
   }
 }
 
+void spawnEntity(flecs::world &ecs, flecs::entity &e) {
+  auto pos = e.get<TransformComponent>().position;
+  auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
+  auto entity = ecs.entity()
+                   .set<TransformComponent>({pos, vel})
+                   .set<EnergyComponent>({});
+  if (e.has<PredatorTag>()) {
+    entity.add<PredatorTag>();
+  } else {
+    entity.add<PreyTag>();
+  }
+}
+
 void updateEnergyComponent(flecs::world &ecs, flecs::entity &e,
                            EnergyComponent &energyComponent) {
   if (e.has<PredatorTag>()) {
@@ -34,20 +47,10 @@ void updateEnergyComponent(flecs::world &ecs, flecs::entity &e,
   }
 
   if (energyComponent.energy > maxEnergy) {
-    energyComponent.energy -= maxEnergy * 0.5F;
-    auto spawn = [&ecs, &e]() {
-      auto pos = e.get<TransformComponent>().position;
-      auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
-      auto entity = ecs.entity()
-                        .set<TransformComponent>({pos, vel})
-                        .set<EnergyComponent>({});
-      if (e.has<PredatorTag>()) {
-        entity.add<PredatorTag>();
-      } else {
-        entity.add<PreyTag>();
-      }
-    };
-    ecs.defer(spawn);
+    if(ecs.count<TransformComponent>() < 1000){
+      energyComponent.energy -= maxEnergy * 0.5F;
+      ecs.defer([&ecs, &e]() { spawnEntity(ecs, e); });
+    }
   } else if (energyComponent.energy < 0) {
     ecs.defer([e] { e.destruct(); });
   }
