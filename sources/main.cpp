@@ -14,7 +14,6 @@ float gridSizeF = (float)gridSize;
 float gridSizeHalfF = (float)gridSize / 2.f;
 
 enum EntityType { PREDATOR, PREY };
-
 struct TransformComponent {
   Vector3 position;
   Vector3 velocity;
@@ -95,7 +94,7 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
   SpawnComponent &spawn = predator.get_mut<SpawnComponent>();
 
   float minDist = 1e6f;
-  flecs::entity *closestPrey = nullptr;
+  flecs::entity closestPrey;
   Vector3 *closestPreyPosition = nullptr;
   ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType){
     TransformComponent &preyTransform = e.get_mut<TransformComponent>();
@@ -103,12 +102,12 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
       float dist = Vector3Distance(transform.position, preyTransform.position);
       if (dist < minDist) {
         minDist = dist;
-        closestPrey = &e;
+        closestPrey = e;
         closestPreyPosition = &preyTransform.position;
       }
     } });
 
-  if (closestPrey != nullptr) {
+  if (closestPreyPosition != nullptr) {
     Vector3 dir = Vector3Subtract(*closestPreyPosition, transform.position);
     float dist = Vector3Length(dir);
     if (dist > 1.0f) {
@@ -117,12 +116,16 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
       transform.velocity.z = dir.z;
       spawn.energy -= dt * predatorEnergyLossFactor;
     } else if (dist < 1.0f) {
-      // ecs.defer([&closestPrey]()
-      //           { closestPrey->destruct(); });
+      ecs.defer([closestPrey]
+                { closestPrey.destruct(); });
       spawn.energy += maxEnergy * 0.5f;
     }
   } else {
     spawn.energy -= dt * predatorEnergyLossFactor;
+  }
+  if (spawn.energy < 0) {
+    ecs.defer([predator]
+              { predator.destruct(); });
   }
 }
 
@@ -152,7 +155,7 @@ int main(void) {
             { updateSpawnComponent(ecs, e, spawnComponent); });
   ecs.system<TransformComponent>()
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity e, TransformComponent &transformComponent)
+      .each([](flecs::entity e, TransformComponent &transformComponent)
             { updateTransform(transformComponent); });
   ecs.system<EntityType>()
       .kind(flecs::OnUpdate)
