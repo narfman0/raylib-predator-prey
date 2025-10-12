@@ -25,13 +25,13 @@ void updateTransform(TransformComponent &transform) {
   }
 }
 
-void spawnEntity(flecs::world &ecs, flecs::entity &e) {
-  auto pos = e.get<TransformComponent>().position;
+void spawnEntity(flecs::world &ecs, bool isPredator,
+                 const Vector3 &parentPosition) {
   auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
   auto entity = ecs.entity()
-                   .set<TransformComponent>({pos, vel})
-                   .set<EnergyComponent>({});
-  if (e.has<PredatorTag>()) {
+                    .set<TransformComponent>({parentPosition, vel})
+                    .set<EnergyComponent>({});
+  if (isPredator) {
     entity.add<PredatorTag>();
   } else {
     entity.add<PreyTag>();
@@ -47,9 +47,12 @@ void updateEnergyComponent(flecs::world &ecs, flecs::entity &e,
   }
 
   if (energyComponent.energy > maxEnergy) {
-    if(ecs.count<TransformComponent>() < 1000){
+    if (ecs.count<TransformComponent>() < maxEntities) {
       energyComponent.energy -= maxEnergy * 0.5F;
-      ecs.defer([&ecs, &e]() { spawnEntity(ecs, e); });
+      ecs.defer([&ecs, &e]() {
+        spawnEntity(ecs, e.has<PredatorTag>(),
+                    e.get<TransformComponent>().position);
+      });
     }
   } else if (energyComponent.energy < 0) {
     ecs.defer([e] { e.destruct(); });
