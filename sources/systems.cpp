@@ -64,22 +64,22 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
   auto &transform = predator.get_mut<TransformComponent>();
   auto &energyComponent = predator.get_mut<EnergyComponent>();
 
-  float minDist = 1e6F;
+  float minDistSq = pursuitRangeSq;
   flecs::entity closestPrey;
   Vector3 *closestPreyPosition = nullptr;
   ecs.query<PreyTag>().each([&](flecs::entity entity, PreyTag &) {
     auto &preyTransform = entity.get_mut<TransformComponent>();
-    const float dist =
-        Vector3Distance(transform.position, preyTransform.position);
-    if (dist < minDist) {
-      minDist = dist;
+    const float distSq =
+        Vector3DistanceSqr(transform.position, preyTransform.position);
+    if (distSq < minDistSq) {
+      minDistSq = distSq;
       closestPrey = entity;
       closestPreyPosition = &preyTransform.position;
     }
   });
 
   if (closestPreyPosition != nullptr) {
-    if (minDist > 1.0F) {
+    if (minDistSq > 1.0F) {
       Vector3 dir = Vector3Subtract(*closestPreyPosition, transform.position);
       dir = Vector3Scale(Vector3Normalize(dir), speed);
       transform.velocity.x = dir.x;

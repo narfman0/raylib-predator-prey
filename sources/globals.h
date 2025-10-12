@@ -13,3 +13,5 @@ const float gridSizeF = (float)gridSize;
 const float gridSizeHalfF = (float)gridSize / 2.0F;
 const int targetFps = 60;
 const int maxEntities = 800;
+const float pursuitRange = 20.0F;
+const float pursuitRangeSq = pursuitRange * pursuitRange;
