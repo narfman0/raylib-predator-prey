@@ -2,6 +2,7 @@
 #include <ctime>
 #include <format>
 
+#include "spdlog/spdlog.h"
 #include <flecs.h>
 #include <raylib.h>
 
@@ -14,19 +15,12 @@ static void initializeEntities(flecs::world &ecs, int count, bool isPredator) {
   for (int i = 0; i < count; i++) {
     auto pos = Vector3{randRange(-gridSizeHalfF, gridSizeHalfF), 0,
                        randRange(-gridSizeHalfF, gridSizeHalfF)};
-    auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
-    auto entity = ecs.entity()
-                      .set<TransformComponent>({pos, vel})
-                      .set<EnergyComponent>({initialEnergy});
-    if (isPredator) {
-      entity.add<PredatorTag>();
-    } else {
-      entity.add<PreyTag>();
-    }
+    spawnEntity(ecs, isPredator, pos);
   }
 }
 
 static void initialize(flecs::world &ecs) {
+  spdlog::info("Initializing world...");
   initializeEntities(ecs, initialPredators, true);
   initializeEntities(ecs, initialPrey, false);
 
@@ -45,6 +39,7 @@ static void initialize(flecs::world &ecs) {
       .each([&ecs](flecs::entity entity, PredatorTag &) {
         updatePredatorBehavior(ecs, entity);
       });
+  spdlog::info("World initialized!");
 }
 
 int main(void) {
@@ -64,6 +59,8 @@ int main(void) {
   camera.up = Vector3{0.0F, 1.F, 0.0F};
   camera.fovy = 45.0F;
   camera.projection = CAMERA_PERSPECTIVE;
+
+  spdlog::info("Initial setup complete, beginning game loop");
 
   while (!WindowShouldClose()) {
     if (IsKeyPressed(KEY_R)) {
@@ -88,9 +85,13 @@ int main(void) {
 
     DrawGrid(gridSize, 1.0F);
     EndMode3D();
-    DrawText(std::format("Entities: {}", ecs.count<TransformComponent>()).c_str(), 10, 40, 20, DARKGRAY);
-    DrawText(std::format("Predators: {}", ecs.count<PredatorTag>()).c_str(), 10, 80, 20, DARKGRAY);
-    DrawText(std::format("Prey: {}", ecs.count<PreyTag>()).c_str(), 10, 120, 20, DARKGRAY);
+    DrawText(
+        std::format("Entities: {}", ecs.count<TransformComponent>()).c_str(),
+        10, 40, 20, DARKGRAY);
+    DrawText(std::format("Predators: {}", ecs.count<PredatorTag>()).c_str(), 10,
+             80, 20, DARKGRAY);
+    DrawText(std::format("Prey: {}", ecs.count<PreyTag>()).c_str(), 10, 120, 20,
+             DARKGRAY);
     DrawFPS(10, 10);
     EndDrawing();
   }
