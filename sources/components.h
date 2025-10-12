@@ -17,7 +17,6 @@ struct TransformComponent {
   Vector3 velocity;
 };
 
-struct SpawnComponent {
-  float spawnTime = spawnFrequency;
-  float energy = maxEnergy;
+struct EnergyComponent {
+  float energy = maxEnergy / 2.0F;
 };

@@ -16,7 +16,7 @@ static void initializeEntities(flecs::world &ecs, int count) {
     auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
     auto entity = ecs.entity()
                       .set<TransformComponent>({pos, vel})
-                      .set<SpawnComponent>({spawnFrequency, maxEnergy});
+                      .set<EnergyComponent>({maxEnergy / 2.0F});
     if (i % 4 == 0) {
       entity.add<PredatorTag>();
     } else {
@@ -36,10 +36,10 @@ int main(void) {
   std::srand((unsigned int)std::time({}));
   initializeEntities(ecs, gridSize);
 
-  ecs.system<SpawnComponent>()
+  ecs.system<EnergyComponent>()
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity entity, SpawnComponent &spawnComponent) {
-        updateSpawnComponent(ecs, entity, spawnComponent);
+      .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent) {
+        updateEnergyComponent(ecs, entity, energyComponent);
       });
   ecs.system<TransformComponent>()
       .kind(flecs::OnUpdate)

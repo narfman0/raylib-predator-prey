@@ -6,6 +6,6 @@
 #include "components.h"
 
 void updateTransform(TransformComponent &transform);
-void updateSpawnComponent(flecs::world &ecs, flecs::entity &entity,
-                          SpawnComponent &spawnComponent);
+void updateEnergyComponent(flecs::world &ecs, flecs::entity &entity,
+                           EnergyComponent &energyComponent);
 void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator);

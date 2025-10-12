@@ -25,34 +25,38 @@ void updateTransform(TransformComponent &transform) {
   }
 }
 
-void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
-                          SpawnComponent &spawnComponent) {
-  if (spawnComponent.spawnTime < 0 &&
-      spawnComponent.energy > maxEnergy * 0.5F) {
-    spawnComponent.spawnTime = spawnFrequency;
-    spawnComponent.energy -= maxEnergy * 0.5F;
-    auto deferredSpawn = [&ecs, &e]() {
+void updateEnergyComponent(flecs::world &ecs, flecs::entity &e,
+                           EnergyComponent &energyComponent) {
+  if (e.has<PredatorTag>()) {
+    energyComponent.energy -= (GetFrameTime() * predatorEnergyLossFactor);
+  } else {
+    energyComponent.energy += (GetFrameTime() * preyEnergyGainFactor);
+  }
+
+  if (energyComponent.energy > maxEnergy) {
+    energyComponent.energy -= maxEnergy * 0.5F;
+    auto spawn = [&ecs, &e]() {
       auto pos = e.get<TransformComponent>().position;
       auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
       auto entity = ecs.entity()
                         .set<TransformComponent>({pos, vel})
-                        .set<SpawnComponent>({spawnFrequency, maxEnergy});
+                        .set<EnergyComponent>({});
       if (e.has<PredatorTag>()) {
         entity.add<PredatorTag>();
       } else {
         entity.add<PreyTag>();
       }
     };
-    ecs.defer(deferredSpawn);
-  } else {
-    spawnComponent.spawnTime -= GetFrameTime();
+    ecs.defer(spawn);
+  } else if (energyComponent.energy < 0) {
+    ecs.defer([e] { e.destruct(); });
   }
 }
 
 void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
   float dt = GetFrameTime();
   auto &transform = predator.get_mut<TransformComponent>();
-  auto &spawn = predator.get_mut<SpawnComponent>();
+  auto &energyComponent = predator.get_mut<EnergyComponent>();
 
   float minDist = 1e6F;
   flecs::entity closestPrey;
@@ -74,15 +78,12 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
       dir = Vector3Scale(Vector3Normalize(dir), speed);
       transform.velocity.x = dir.x;
       transform.velocity.z = dir.z;
-      spawn.energy -= dt * predatorEnergyLossFactor;
     } else {
       ecs.defer([closestPrey] { closestPrey.destruct(); });
-      spawn.energy += maxEnergy * 0.5F;
+      energyComponent.energy += maxEnergy * 0.5F;
     }
-  } else {
-    spawn.energy -= dt * predatorEnergyLossFactor;
   }
-  if (spawn.energy < 0) {
+  if (energyComponent.energy < 0) {
     ecs.defer([predator] { predator.destruct(); });
   }
 }
