@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <ctime>
+#include <format>
 
 #include <flecs.h>
 #include <raylib.h>
@@ -87,7 +88,9 @@ int main(void) {
 
     DrawGrid(gridSize, 1.0F);
     EndMode3D();
-    DrawText("Welcome to the third dimension!", 10, 40, 20, DARKGRAY);
+    DrawText(std::format("Entities: {}", ecs.count<TransformComponent>()).c_str(), 10, 40, 20, DARKGRAY);
+    DrawText(std::format("Predators: {}", ecs.count<PredatorTag>()).c_str(), 10, 80, 20, DARKGRAY);
+    DrawText(std::format("Prey: {}", ecs.count<PreyTag>()).c_str(), 10, 120, 20, DARKGRAY);
     DrawFPS(10, 10);
     EndDrawing();
   }
