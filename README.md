@@ -4,6 +4,5 @@ I am trying out some simulations and fun little projects, and figured I'd save t
 
 ## todo
 
-* clangd
 * tests
 * split ui and modules

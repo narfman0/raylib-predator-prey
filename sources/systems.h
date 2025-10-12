@@ -4,7 +4,6 @@
 #include <raylib.h>
 
 #include "components.h"
-#include "util.h"
 
 void updateTransform(TransformComponent &transform);
 void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
