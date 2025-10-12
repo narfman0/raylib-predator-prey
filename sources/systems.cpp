@@ -30,7 +30,8 @@ void spawnEntity(flecs::world &ecs, bool isPredator,
   auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
   auto entity = ecs.entity()
                     .set<TransformComponent>({parentPosition, vel})
-                    .set<EnergyComponent>({});
+                    .set<EnergyComponent>(
+                        {randRange(spawnEnergy * 0.2F, spawnEnergy * 0.7F)});
   if (isPredator) {
     entity.add<PredatorTag>();
   } else {
@@ -46,9 +47,9 @@ void updateEnergyComponent(flecs::world &ecs, flecs::entity &e,
     energyComponent.energy += (GetFrameTime() * preyEnergyGainFactor);
   }
 
-  if (energyComponent.energy > maxEnergy) {
+  if (energyComponent.energy > spawnEnergy) {
     if (ecs.count<TransformComponent>() < maxEntities) {
-      energyComponent.energy -= maxEnergy * 0.5F;
+      energyComponent.energy -= spawnEnergy * 0.5F;
       ecs.defer([&ecs, &e]() {
         spawnEntity(ecs, e.has<PredatorTag>(),
                     e.get<TransformComponent>().position);
