@@ -18,5 +18,5 @@ struct TransformComponent {
 };
 
 struct EnergyComponent {
-  float energy = maxEnergy / 2.0F;
+  float energy = initialEnergy;
 };

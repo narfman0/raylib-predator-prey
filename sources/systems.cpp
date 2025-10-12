@@ -80,7 +80,7 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
       transform.velocity.z = dir.z;
     } else {
       ecs.defer([closestPrey] { closestPrey.destruct(); });
-      energyComponent.energy += maxEnergy * 0.5F;
+      energyComponent.energy += predatorEnergyGainAmount;
     }
   }
   if (energyComponent.energy < 0) {

@@ -9,15 +9,15 @@
 #include "systems.h"
 #include "util.h"
 
-static void initializeEntities(flecs::world &ecs, int count) {
+static void initializeEntities(flecs::world &ecs, int count, bool isPredator) {
   for (int i = 0; i < count; i++) {
     auto pos = Vector3{randRange(-gridSizeHalfF, gridSizeHalfF), 0,
                        randRange(-gridSizeHalfF, gridSizeHalfF)};
     auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
     auto entity = ecs.entity()
                       .set<TransformComponent>({pos, vel})
-                      .set<EnergyComponent>({maxEnergy / 2.0F});
-    if (i % 4 == 0) {
+                      .set<EnergyComponent>({initialEnergy});
+    if (isPredator) {
       entity.add<PredatorTag>();
     } else {
       entity.add<PreyTag>();
@@ -25,16 +25,9 @@ static void initializeEntities(flecs::world &ecs, int count) {
   }
 }
 
-int main(void) {
-  const int screenWidth = 1600;
-  const int screenHeight = 1200;
-  InitWindow(screenWidth, screenHeight, "predator prey");
-  DisableCursor();
-  SetTargetFPS(targetFps);
-
-  flecs::world ecs;
-  std::srand((unsigned int)std::time({}));
-  initializeEntities(ecs, gridSize);
+static void initialize(flecs::world &ecs) {
+  initializeEntities(ecs, initialPredators, true);
+  initializeEntities(ecs, initialPrey, false);
 
   ecs.system<EnergyComponent>()
       .kind(flecs::OnUpdate)
@@ -51,6 +44,18 @@ int main(void) {
       .each([&ecs](flecs::entity entity, PredatorTag &) {
         updatePredatorBehavior(ecs, entity);
       });
+}
+
+int main(void) {
+  const int screenWidth = 1600;
+  const int screenHeight = 1200;
+  InitWindow(screenWidth, screenHeight, "predator prey");
+  DisableCursor();
+  SetTargetFPS(targetFps);
+
+  flecs::world ecs;
+  std::srand((unsigned int)std::time({}));
+  initialize(ecs);
 
   Camera3D camera = {0};
   camera.position = Vector3{0.0F, 10.0F, 10.0F};
@@ -62,7 +67,7 @@ int main(void) {
   while (!WindowShouldClose()) {
     if (IsKeyPressed(KEY_R)) {
       ecs.reset();
-      initializeEntities(ecs, gridSize);
+      initialize(ecs);
     }
     ecs.progress(GetFrameTime());
 
