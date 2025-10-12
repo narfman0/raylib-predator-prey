@@ -41,8 +41,8 @@ void initializeEntities(flecs::world &ecs, int count) {
   }
 }
 
-void updateTransform(TransformComponent &transform, float dt) {
-  transform.position = Vector3Add(transform.position, transform.velocity * dt);
+void updateTransform(TransformComponent &transform) {
+  transform.position = Vector3Add(transform.position, transform.velocity * GetFrameTime());
   if (transform.position.x > gridSizeHalfF) {
     transform.position.x = gridSizeHalfF;
     transform.velocity.x *= -1;
@@ -70,16 +70,22 @@ void spawnEntity(flecs::world &ecs, EntityType type, Vector3 position) {
 }
 
 void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
-                          SpawnComponent &spawnComponent, float dt) {
+                          SpawnComponent &spawnComponent) {
   if (spawnComponent.spawnTime < 0 &&
       spawnComponent.energy > maxEnergy * 0.5f) {
     spawnComponent.spawnTime = spawnFrequency;
     spawnComponent.energy -= maxEnergy * 0.5f;
-    // TODO fix crash
-    // spawnEntity(ecs, e.get<EntityType>(),
-    // e.get<TransformComponent>().position);
+    auto deferredSpawn = [&ecs, &e]()
+    {
+      ecs.entity()
+          .set<TransformComponent>({e.get<TransformComponent>().position, Vector3{randRange(-speed, speed), 0,
+                                                                                  randRange(-speed, speed)}})
+          .set<EntityType>(e.get<EntityType>())
+          .set<SpawnComponent>({spawnFrequency, maxEnergy});
+    };
+    ecs.defer(deferredSpawn);
   } else {
-    spawnComponent.spawnTime -= dt;
+    spawnComponent.spawnTime -= GetFrameTime();
   }
 }
 
@@ -142,6 +148,15 @@ int main(void) {
 
   initializeEntities(ecs, gridSize);
 
+  ecs.system<SpawnComponent>()
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity e, SpawnComponent &spawnComponent)
+            { updateSpawnComponent(ecs, e, spawnComponent); });
+  ecs.system<TransformComponent>()
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity e, TransformComponent &transformComponent)
+            { updateTransform(transformComponent); });
+
   while (!WindowShouldClose()) {
     if (IsKeyPressed(KEY_R)) {
       ecs.reset();
@@ -149,15 +164,6 @@ int main(void) {
     }
     float dt = GetFrameTime();
     ecs.progress(dt);
-
-    ecs.query<TransformComponent>().each(
-        [&](flecs::entity e, TransformComponent &transformComponent) {
-          updateTransform(transformComponent, dt);
-        });
-    ecs.query<SpawnComponent>().each(
-        [&](flecs::entity e, SpawnComponent &spawnComponent) {
-          updateSpawnComponent(ecs, e, spawnComponent, dt);
-        });
 
     // TODO fix crash
     // ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType)
