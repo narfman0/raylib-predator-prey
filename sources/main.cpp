@@ -89,29 +89,27 @@ void updateSpawnComponent(flecs::world &ecs, flecs::entity &e,
   }
 }
 
-void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
-                            float dt) {
+void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator) {
+  float dt = GetFrameTime();
   TransformComponent &transform = predator.get_mut<TransformComponent>();
   SpawnComponent &spawn = predator.get_mut<SpawnComponent>();
 
   float minDist = 1e6f;
   flecs::entity *closestPrey = nullptr;
-  ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType) {
+  Vector3 *closestPreyPosition = nullptr;
+  ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType){
+    TransformComponent &preyTransform = e.get_mut<TransformComponent>();
     if (entityType == EntityType::PREY) {
-      const TransformComponent &preyTransform = e.get<TransformComponent>();
       float dist = Vector3Distance(transform.position, preyTransform.position);
       if (dist < minDist) {
         minDist = dist;
         closestPrey = &e;
+        closestPreyPosition = &preyTransform.position;
       }
-    }
-  });
+    } });
 
   if (closestPrey != nullptr) {
-    const TransformComponent &preyTransformComponent =
-        closestPrey->get<TransformComponent>();
-    Vector3 dir =
-        Vector3Subtract(preyTransformComponent.position, transform.position);
+    Vector3 dir = Vector3Subtract(*closestPreyPosition, transform.position);
     float dist = Vector3Length(dir);
     if (dist > 1.0f) {
       dir = Vector3Scale(Vector3Normalize(dir), speed);
@@ -119,8 +117,8 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
       transform.velocity.z = dir.z;
       spawn.energy -= dt * predatorEnergyLossFactor;
     } else if (dist < 1.0f) {
-      SpawnComponent &prey = closestPrey->get_mut<SpawnComponent>();
-      prey.energy = 0;
+      // ecs.defer([&closestPrey]()
+      //           { closestPrey->destruct(); });
       spawn.energy += maxEnergy * 0.5f;
     }
   } else {
@@ -156,29 +154,20 @@ int main(void) {
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity e, TransformComponent &transformComponent)
             { updateTransform(transformComponent); });
+  ecs.system<EntityType>()
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity e, EntityType &entityType)
+            { 
+      if(entityType == EntityType::PREDATOR){
+        updatePredatorBehavior(ecs, e);
+      } });
 
   while (!WindowShouldClose()) {
     if (IsKeyPressed(KEY_R)) {
       ecs.reset();
       initializeEntities(ecs, gridSize);
     }
-    float dt = GetFrameTime();
-    ecs.progress(dt);
-
-    // TODO fix crash
-    // ecs.query<EntityType>().each([&](flecs::entity e, EntityType &entityType)
-    // {
-    //   if(entityType == EntityType::PREDATOR){
-    //     updatePredatorBehavior(ecs, e, dt);
-    //   }
-    // });
-
-    ecs.query<SpawnComponent>().each(
-        [&](flecs::entity e, SpawnComponent &spawnComponent) {
-          if (spawnComponent.energy <= 0) {
-            e.destruct();
-          }
-        });
+    ecs.progress(GetFrameTime());
 
     UpdateCamera(&camera, CAMERA_FIRST_PERSON);
     BeginDrawing();
