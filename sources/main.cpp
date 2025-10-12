@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include <ctime>
 
 #include <flecs.h>
@@ -11,12 +10,12 @@
 
 void initializeEntities(flecs::world &ecs, int count) {
   for (int i = 0; i < count; i++) {
+    auto pos = Vector3{randRange(-gridSizeHalfF, gridSizeHalfF), 0,
+                       randRange(-gridSizeHalfF, gridSizeHalfF)};
+    auto vel = Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)};
     auto entity = ecs.entity()
-        .set<TransformComponent>(
-            {Vector3{randRange(-gridSizeHalfF, gridSizeHalfF), 0,
-                     randRange(-gridSizeHalfF, gridSizeHalfF)},
-             Vector3{randRange(-speed, speed), 0, randRange(-speed, speed)}})
-        .set<SpawnComponent>({spawnFrequency, maxEnergy});
+                      .set<TransformComponent>({pos, vel})
+                      .set<SpawnComponent>({spawnFrequency, maxEnergy});
     if (i % 4 == 0) {
       entity.add<PredatorTag>();
     } else {
@@ -38,16 +37,19 @@ int main(void) {
 
   ecs.system<SpawnComponent>()
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity e, SpawnComponent &spawnComponent)
-            { updateSpawnComponent(ecs, e, spawnComponent); });
+      .each([&ecs](flecs::entity e, SpawnComponent &spawnComponent) {
+        updateSpawnComponent(ecs, e, spawnComponent);
+      });
   ecs.system<TransformComponent>()
       .kind(flecs::OnUpdate)
-      .each([](flecs::entity e, TransformComponent &transformComponent)
-            { updateTransform(transformComponent); });
+      .each([](flecs::entity e, TransformComponent &transformComponent) {
+        updateTransform(transformComponent);
+      });
   ecs.system<PredatorTag>()
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity e, PredatorTag &tag)
-            { updatePredatorBehavior(ecs, e); });
+      .each([&ecs](flecs::entity e, PredatorTag &tag) {
+        updatePredatorBehavior(ecs, e);
+      });
 
   Camera3D camera = {0};
   camera.position = Vector3{0.0f, 10.0f, 10.0f};
