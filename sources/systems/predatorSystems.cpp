@@ -40,6 +40,7 @@ void initializePredatorSystems(flecs::world &ecs) {
       });
   ecs.system<PredatorComponent, Position, Velocity, Energy>(
          "Predator Attack System")
+      .multi_threaded(true)
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, PredatorComponent &predatorComponent,
                    Position &position, Velocity &velocity, Energy &energy) {
@@ -51,8 +52,7 @@ void initializePredatorSystems(flecs::world &ecs) {
             velocity.x = dir.x;
             velocity.z = dir.z;
           } else {
-            ecs.defer(
-                [predatorComponent] { predatorComponent.target.destruct(); });
+            predatorComponent.target.destruct();
             energy.energy += predatorEnergyGainAmount;
           }
         }
