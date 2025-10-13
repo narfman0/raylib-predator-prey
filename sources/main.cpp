@@ -80,10 +80,10 @@ int main(void) {
     ecs.query<TransformComponent>().each(
         [&](flecs::entity entity, TransformComponent &transformComponent) {
           const bool isPredator = entity.has<PredatorTag>();
-          DrawCube(transformComponent.position, 1.0F, 1.0F, 1.0F,
-                   isPredator ? RED : GREEN);
-          DrawCubeWires(transformComponent.position, 1.0F, 1.0F, 1.0F,
-                        isPredator ? MAROON : LIME);
+          DrawCube(transformComponent.position, entityWidth, entityWidth,
+                   entityWidth, isPredator ? RED : GREEN);
+          DrawCubeWires(transformComponent.position, entityWidth, entityWidth,
+                        entityWidth, isPredator ? MAROON : LIME);
         });
 
     DrawGrid(gridSize, 1.0F);
