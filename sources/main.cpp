@@ -27,7 +27,6 @@ static void initialize(flecs::world &ecs) {
   initializeTransformSystems(ecs);
   initializePredatorSystems(ecs);
   ecs.set_threads(8);
-  ecs.import <flecs::stats>();
   ecs.set<flecs::Rest>({});
   spdlog::info("World initialized!");
 }
@@ -41,6 +40,7 @@ int main(void) {
 
   flecs::world ecs;
   std::srand((unsigned int)std::time({}));
+  ecs.import <flecs::stats>();
   initialize(ecs);
 
   Camera3D camera = {0};
