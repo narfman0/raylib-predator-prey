@@ -44,7 +44,7 @@ void initializePredatorSystems(flecs::world &ecs) {
       .each([&ecs](flecs::entity entity, PredatorComponent &predatorComponent,
                    Position &position, Velocity &velocity, Energy &energy) {
         if (predatorComponent.target.is_valid()) {
-          if (predatorComponent.targetDistanceSq > 1.0F) {
+          if (predatorComponent.targetDistanceSq > entityWidth) {
             Vector3 dir =
                 Vector3Subtract(predatorComponent.targetPosition, position);
             dir = Vector3Scale(Vector3Normalize(dir), speed);
