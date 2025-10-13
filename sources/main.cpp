@@ -24,22 +24,24 @@ static void initialize(flecs::world &ecs) {
   initializeEntities(ecs, initialPredators, true);
   initializeEntities(ecs, initialPrey, false);
 
-  ecs.system<EnergyComponent>()
+  ecs.system<EnergyComponent>("EnergySystem")
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent) {
         updateEnergyComponent(ecs, entity, energyComponent);
       });
-  ecs.system<TransformComponent>()
+  ecs.system<TransformComponent>("TransformSystem")
       .kind(flecs::OnUpdate)
       .each([](flecs::entity, TransformComponent &transformComponent) {
         updateTransform(transformComponent);
       });
-  ecs.system<PredatorTag>()
+  ecs.system<PredatorTag>("PredatorSystem")
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, PredatorTag &) {
         updatePredatorBehavior(ecs, entity);
       });
   ecs.set_threads(8);
+  ecs.import <flecs::stats>();
+  ecs.set<flecs::Rest>({});
   spdlog::info("World initialized!");
 }
 
