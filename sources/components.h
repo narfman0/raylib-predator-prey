@@ -1,11 +1,12 @@
 #pragma once
 
+#include <flecs.h>
 #include <raymath.h>
 
 #include "globals.h"
 
-struct PredatorTag {
-  bool filler;
+struct PredatorComponent {
+  flecs::entity target;
 };
 
 struct PreyTag {
@@ -15,6 +16,6 @@ struct PreyTag {
 struct Position : Vector3 {};
 struct Velocity : Vector3 {};
 
-struct EnergyComponent {
+struct Energy {
   float energy = spawnEnergy / 2.0f;
 };

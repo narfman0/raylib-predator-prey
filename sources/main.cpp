@@ -65,7 +65,7 @@ int main(void) {
     BeginMode3D(camera);
 
     ecs.query<Position>().each([&](flecs::entity entity, Position &position) {
-      const bool isPredator = entity.has<PredatorTag>();
+      const bool isPredator = entity.has<PredatorComponent>();
       DrawCube(position, entityWidth, entityWidth, entityWidth,
                isPredator ? RED : GREEN);
       DrawCubeWires(position, entityWidth, entityWidth, entityWidth,
@@ -76,8 +76,9 @@ int main(void) {
     EndMode3D();
     DrawText(std::format("Entities: {}", ecs.count<Position>()).c_str(), 10, 40,
              20, DARKGRAY);
-    DrawText(std::format("Predators: {}", ecs.count<PredatorTag>()).c_str(), 10,
-             80, 20, DARKGRAY);
+    DrawText(
+        std::format("Predators: {}", ecs.count<PredatorComponent>()).c_str(),
+        10, 80, 20, DARKGRAY);
     DrawText(std::format("Prey: {}", ecs.count<PreyTag>()).c_str(), 10, 120, 20,
              DARKGRAY);
     DrawText(std::format("Threads: {}", ecs.get_threads()).c_str(), 10, 160, 20,
