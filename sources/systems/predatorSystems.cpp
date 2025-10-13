@@ -34,9 +34,6 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
       energyComponent.energy += predatorEnergyGainAmount;
     }
   }
-  if (energyComponent.energy < 0) {
-    ecs.defer([predator] { predator.destruct(); });
-  }
 }
 
 void initializePredatorSystems(flecs::world &ecs) {
