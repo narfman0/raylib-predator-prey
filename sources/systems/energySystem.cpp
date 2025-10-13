@@ -19,22 +19,38 @@ void spawnEntity(flecs::world &ecs, bool isPredator,
   }
 }
 
-void updateEnergyComponent(flecs::world &ecs, flecs::entity &e,
-                           EnergyComponent &energyComponent) {
-  if (e.has<PredatorTag>()) {
-    energyComponent.energy -= (GetFrameTime() * predatorEnergyLossFactor);
-  } else {
-    energyComponent.energy += (GetFrameTime() * preyEnergyGainFactor);
-  }
-
-  if (energyComponent.energy > spawnEnergy) {
-    if (ecs.count<Position>() < maxEntities) {
-      energyComponent.energy -= spawnEnergy * 0.5F;
-      ecs.defer([&ecs, &e]() {
-        spawnEntity(ecs, e.has<PredatorTag>(), e.get<Position>());
+void initializeEnergySystems(flecs::world &ecs) {
+  ecs.system<EnergyComponent>("Energy System")
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent) {
+        if (energyComponent.energy > spawnEnergy) {
+          if (ecs.count<Position>() > maxEntities)
+            return;
+          energyComponent.energy -= spawnEnergy * 0.5F;
+          ecs.defer([&ecs, &entity]() {
+            spawnEntity(ecs, entity.has<PredatorTag>(), entity.get<Position>());
+          });
+        }
       });
-    }
-  } else if (energyComponent.energy < 0) {
-    ecs.defer([e] { e.destruct(); });
-  }
+  ecs.system<EnergyComponent>("No Energy System")
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent) {
+        if (energyComponent.energy < 0) {
+          ecs.defer([entity] { entity.destruct(); });
+        }
+      });
+  ecs.system<EnergyComponent, const PredatorTag>("Predator Energy System")
+      .multi_threaded(true)
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent,
+                   const PredatorTag &) {
+        energyComponent.energy -= (GetFrameTime() * predatorEnergyLossFactor);
+      });
+  ecs.system<EnergyComponent, const PreyTag>("Prey Energy System")
+      .multi_threaded(true)
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent,
+                   const PreyTag &) {
+        energyComponent.energy += (GetFrameTime() * preyEnergyGainFactor);
+      });
 }

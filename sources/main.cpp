@@ -23,19 +23,16 @@ static void initialize(flecs::world &ecs) {
   spdlog::info("Initializing world...");
   initializeEntities(ecs, initialPredators, true);
   initializeEntities(ecs, initialPrey, false);
+  initializeEnergySystems(ecs);
 
-  ecs.system<EnergyComponent>("EnergySystem")
-      .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent) {
-        updateEnergyComponent(ecs, entity, energyComponent);
-      });
-  ecs.system<Position, Velocity>("TransformSystem")
+  ecs.system<Position, Velocity>("Transform System")
       .multi_threaded(true)
       .kind(flecs::OnUpdate)
       .each([](flecs::entity, Position &position, Velocity &velocity) {
         updateTransform(position, velocity);
       });
-  ecs.system<PredatorTag, Position, Velocity, EnergyComponent>("PredatorSystem")
+  ecs.system<PredatorTag, Position, Velocity, EnergyComponent>(
+         "Predator System")
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, PredatorTag &, Position &position,
                    Velocity &velocity, EnergyComponent &energyComponent) {
