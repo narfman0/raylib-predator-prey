@@ -36,7 +36,7 @@ void initializePredatorSystems(flecs::world &ecs) {
           predatorComponent.target = flecs::entity();
         }
         predatorComponent.framesTillNextTargetSearch =
-            predatorTargetSearchCooldownFramesMin + rand() % 5;
+            predatorTargetSearchCooldownFramesMin + rand() % 3;
       });
   ecs.system<PredatorComponent, Position, Velocity, Energy>(
          "Predator Attack System")
