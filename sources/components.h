@@ -12,10 +12,8 @@ struct PreyTag {
   bool filler;
 };
 
-struct TransformComponent {
-  Vector3 position;
-  Vector3 velocity;
-};
+struct Position : Vector3 {};
+struct Velocity : Vector3 {};
 
 struct EnergyComponent {
   float energy = spawnEnergy / 2.0f;

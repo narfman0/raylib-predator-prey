@@ -4,23 +4,23 @@
 #include "globals.h"
 #include "util.h"
 
-void updateTransform(TransformComponent &transform) {
-  transform.position =
-      Vector3Add(transform.position, transform.velocity * GetFrameTime());
-  if (transform.position.x > gridSizeHalfF) {
-    transform.position.x = gridSizeHalfF;
-    transform.velocity.x *= -1;
+void updateTransform(Position &position, Velocity &velocity) {
+  position.x += velocity.x * GetFrameTime();
+  position.z += velocity.z * GetFrameTime();
+  if (position.x > gridSizeHalfF) {
+    position.x = gridSizeHalfF;
+    velocity.x *= -1;
   }
-  if (transform.position.z > gridSizeHalfF) {
-    transform.position.z = gridSizeHalfF;
-    transform.velocity.z *= -1;
+  if (position.z > gridSizeHalfF) {
+    position.z = gridSizeHalfF;
+    velocity.z *= -1;
   }
-  if (transform.position.x < -gridSizeHalfF) {
-    transform.position.x = -gridSizeHalfF;
-    transform.velocity.x *= -1;
+  if (position.x < -gridSizeHalfF) {
+    position.x = -gridSizeHalfF;
+    velocity.x *= -1;
   }
-  if (transform.position.z < -gridSizeHalfF) {
-    transform.position.z = -gridSizeHalfF;
-    transform.velocity.z *= -1;
+  if (position.z < -gridSizeHalfF) {
+    position.z = -gridSizeHalfF;
+    velocity.z *= -1;
   }
 }

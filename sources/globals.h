@@ -1,8 +1,8 @@
 #pragma once
 
-const int gridSize = 100;
-const int initialPrey = 600;
-const int initialPredators = 100;
+const int gridSize = 500;
+const int initialPrey = 1000;
+const int initialPredators = 200;
 const float spawnEnergy = 10.0F;
 const float speed = 2.0F;
 const float preyEnergyGainFactor = 0.5F;

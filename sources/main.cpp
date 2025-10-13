@@ -29,15 +29,17 @@ static void initialize(flecs::world &ecs) {
       .each([&ecs](flecs::entity entity, EnergyComponent &energyComponent) {
         updateEnergyComponent(ecs, entity, energyComponent);
       });
-  ecs.system<TransformComponent>("TransformSystem")
+  ecs.system<Position, Velocity>("TransformSystem")
       .kind(flecs::OnUpdate)
-      .each([](flecs::entity, TransformComponent &transformComponent) {
-        updateTransform(transformComponent);
+      .each([](flecs::entity, Position &position, Velocity &velocity) {
+        updateTransform(position, velocity);
       });
-  ecs.system<PredatorTag>("PredatorSystem")
+  ecs.system<PredatorTag, Position, Velocity, EnergyComponent>("PredatorSystem")
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity entity, PredatorTag &) {
-        updatePredatorBehavior(ecs, entity);
+      .each([&ecs](flecs::entity entity, PredatorTag &, Position &position,
+                   Velocity &velocity, EnergyComponent &energyComponent) {
+        updatePredatorBehavior(ecs, entity, position, velocity,
+                               energyComponent);
       });
   ecs.set_threads(8);
   ecs.import <flecs::stats>();
@@ -77,20 +79,18 @@ int main(void) {
     ClearBackground(RAYWHITE);
     BeginMode3D(camera);
 
-    ecs.query<TransformComponent>().each(
-        [&](flecs::entity entity, TransformComponent &transformComponent) {
-          const bool isPredator = entity.has<PredatorTag>();
-          DrawCube(transformComponent.position, entityWidth, entityWidth,
-                   entityWidth, isPredator ? RED : GREEN);
-          DrawCubeWires(transformComponent.position, entityWidth, entityWidth,
-                        entityWidth, isPredator ? MAROON : LIME);
-        });
+    ecs.query<Position>().each([&](flecs::entity entity, Position &position) {
+      const bool isPredator = entity.has<PredatorTag>();
+      DrawCube(position, entityWidth, entityWidth, entityWidth,
+               isPredator ? RED : GREEN);
+      DrawCubeWires(position, entityWidth, entityWidth, entityWidth,
+                    isPredator ? MAROON : LIME);
+    });
 
     DrawGrid(gridSize, 1.0F);
     EndMode3D();
-    DrawText(
-        std::format("Entities: {}", ecs.count<TransformComponent>()).c_str(),
-        10, 40, 20, DARKGRAY);
+    DrawText(std::format("Entities: {}", ecs.count<Position>()).c_str(), 10, 40,
+             20, DARKGRAY);
     DrawText(std::format("Predators: {}", ecs.count<PredatorTag>()).c_str(), 10,
              80, 20, DARKGRAY);
     DrawText(std::format("Prey: {}", ecs.count<PreyTag>()).c_str(), 10, 120, 20,
