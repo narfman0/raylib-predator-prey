@@ -34,10 +34,11 @@ void initializeEnergySystems(flecs::world &ecs) {
         }
       });
   ecs.system<Energy>("No Energy System")
-      .kind(flecs::OnUpdate)
+      .multi_threaded(true)
+      .kind(flecs::PostUpdate)
       .each([&ecs](flecs::entity entity, Energy &energy) {
         if (energy.energy < 0) {
-          ecs.defer([entity] { entity.destruct(); });
+          entity.destruct();
         }
       });
   ecs.system<Energy, const PredatorComponent>("Predator Energy System")
