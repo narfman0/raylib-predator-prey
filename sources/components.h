@@ -7,6 +7,9 @@
 
 struct PredatorComponent {
   flecs::entity target;
+  float targetDistanceSq = -1.0F;
+  Vector3 targetPosition;
+  int framesTillNextTargetSearch;
 };
 
 struct PreyTag {
