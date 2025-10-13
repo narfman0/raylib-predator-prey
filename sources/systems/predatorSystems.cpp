@@ -7,7 +7,6 @@
 void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
                             Position &position, Velocity &velocity,
                             EnergyComponent &energyComponent) {
-  float dt = GetFrameTime();
   float minDistSq = pursuitRangeSq;
   flecs::entity closestPrey;
   Vector3 closestPreyPosition;
@@ -33,9 +32,6 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
       ecs.defer([closestPrey] { closestPrey.destruct(); });
       energyComponent.energy += predatorEnergyGainAmount;
     }
-  }
-  if (energyComponent.energy < 0) {
-    ecs.defer([predator] { predator.destruct(); });
   }
 }
 
