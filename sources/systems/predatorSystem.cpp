@@ -11,7 +11,7 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
   float minDistSq = pursuitRangeSq;
   flecs::entity closestPrey;
   Vector3 closestPreyPosition;
-  ecs.query<PreyTag>().each([&](flecs::entity entity, PreyTag &) {
+  ecs.query<const PreyTag>().each([&](flecs::entity entity, const PreyTag &) {
     auto &preyPosition = entity.get<Position>();
     if (aabb(position, pursuitRange, preyPosition)) {
       const float distSq = Vector3DistanceSqr(position, preyPosition);

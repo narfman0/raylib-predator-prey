@@ -30,6 +30,7 @@ static void initialize(flecs::world &ecs) {
         updateEnergyComponent(ecs, entity, energyComponent);
       });
   ecs.system<Position, Velocity>("TransformSystem")
+      .multi_threaded(true)
       .kind(flecs::OnUpdate)
       .each([](flecs::entity, Position &position, Velocity &velocity) {
         updateTransform(position, velocity);
