@@ -33,10 +33,10 @@ void initializeEnergySystems(flecs::world &ecs) {
           });
         }
       });
-  ecs.system<Energy>("No Energy System")
+  ecs.system<const Energy>("No Energy System")
       .multi_threaded(true)
       .kind(flecs::PostUpdate)
-      .each([&ecs](flecs::entity entity, Energy &energy) {
+      .each([&ecs](flecs::entity entity, const Energy &energy) {
         if (energy.energy < 0) {
           entity.destruct();
         }

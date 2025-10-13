@@ -5,11 +5,10 @@
 #include "util.h"
 
 void initializePredatorSystems(flecs::world &ecs) {
-  ecs.system<PredatorComponent, Position, Velocity, Energy>(
-         "Predator Targeting System")
+  ecs.system<PredatorComponent, const Position>("Predator Targeting System")
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, PredatorComponent &predatorComponent,
-                   Position &position, Velocity &velocity, Energy &energy) {
+                   const Position &position) {
         if (--predatorComponent.framesTillNextTargetSearch > 0) {
           return;
         }
@@ -38,12 +37,14 @@ void initializePredatorSystems(flecs::world &ecs) {
         predatorComponent.framesTillNextTargetSearch =
             predatorTargetSearchCooldownFramesMin + rand() % 3;
       });
-  ecs.system<PredatorComponent, Position, Velocity, Energy>(
+  ecs.system<const PredatorComponent, const Position, Velocity, Energy>(
          "Predator Attack System")
       .multi_threaded(true)
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity entity, PredatorComponent &predatorComponent,
-                   Position &position, Velocity &velocity, Energy &energy) {
+      .each([&ecs](flecs::entity entity,
+                   const PredatorComponent &predatorComponent,
+                   const Position &position, Velocity &velocity,
+                   Energy &energy) {
         if (predatorComponent.target.is_valid()) {
           if (predatorComponent.targetDistanceSq > entityWidth) {
             Vector3 dir =
