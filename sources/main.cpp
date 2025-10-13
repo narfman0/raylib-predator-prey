@@ -8,7 +8,7 @@
 
 #include "components.h"
 #include "globals.h"
-#include "systems.h"
+#include "systems/systems.h"
 #include "util.h"
 
 static void initializeEntities(flecs::world &ecs, int count, bool isPredator) {
