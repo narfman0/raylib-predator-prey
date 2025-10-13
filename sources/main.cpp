@@ -24,21 +24,8 @@ static void initialize(flecs::world &ecs) {
   initializeEntities(ecs, initialPredators, true);
   initializeEntities(ecs, initialPrey, false);
   initializeEnergySystems(ecs);
-
-  ecs.system<Position, Velocity>("Transform System")
-      .multi_threaded(true)
-      .kind(flecs::OnUpdate)
-      .each([](flecs::entity, Position &position, Velocity &velocity) {
-        updateTransform(position, velocity);
-      });
-  ecs.system<PredatorTag, Position, Velocity, EnergyComponent>(
-         "Predator System")
-      .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity entity, PredatorTag &, Position &position,
-                   Velocity &velocity, EnergyComponent &energyComponent) {
-        updatePredatorBehavior(ecs, entity, position, velocity,
-                               energyComponent);
-      });
+  initializeTransformSystems(ecs);
+  initializePredatorSystems(ecs);
   ecs.set_threads(8);
   ecs.import <flecs::stats>();
   ecs.set<flecs::Rest>({});

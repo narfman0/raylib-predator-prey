@@ -7,8 +7,6 @@
 
 void spawnEntity(flecs::world &ecs, bool isPredator,
                  const Vector3 &parentPosition);
-void updateTransform(Position &position, Velocity &velocity);
+void initializeTransformSystems(flecs::world &ecs);
 void initializeEnergySystems(flecs::world &ecs);
-void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
-                            Position &position, Velocity &velocity,
-                            EnergyComponent &energyComponent);
+void initializePredatorSystems(flecs::world &ecs);

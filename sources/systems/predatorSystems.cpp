@@ -38,3 +38,14 @@ void updatePredatorBehavior(flecs::world &ecs, flecs::entity &predator,
     ecs.defer([predator] { predator.destruct(); });
   }
 }
+
+void initializePredatorSystems(flecs::world &ecs) {
+  ecs.system<PredatorTag, Position, Velocity, EnergyComponent>(
+         "Predator System")
+      .kind(flecs::OnUpdate)
+      .each([&ecs](flecs::entity entity, PredatorTag &, Position &position,
+                   Velocity &velocity, EnergyComponent &energyComponent) {
+        updatePredatorBehavior(ecs, entity, position, velocity,
+                               energyComponent);
+      });
+}
