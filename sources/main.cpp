@@ -51,14 +51,12 @@ int main(void) {
   camera.projection = CAMERA_PERSPECTIVE;
 
   spdlog::info("Initial setup complete, beginning game loop");
-  const auto positionPredatorQuery =
-      ecs.query<const Position, const PredatorComponent &>();
-  const auto positionPreyQuery = ecs.query<const Position, const PreyTag &>();
 
   while (!WindowShouldClose()) {
     if (IsKeyPressed(KEY_R)) {
       ecs.reset();
       initialize(ecs);
+      spdlog::info("Reinitialization complete");
     }
     ecs.progress(GetFrameTime());
 
@@ -67,13 +65,14 @@ int main(void) {
     ClearBackground(RAYWHITE);
     BeginMode3D(camera);
 
-    positionPredatorQuery.each([&](flecs::entity entity,
-                                   const Position &position,
-                                   const PredatorComponent &) {
-      DrawCube(position, entityWidth, entityWidth, entityWidth, RED);
-      DrawCubeWires(position, entityWidth, entityWidth, entityWidth, MAROON);
-    });
-    positionPreyQuery.each(
+    ecs.query<const Position, const PredatorComponent &>().each(
+        [&](flecs::entity entity, const Position &position,
+            const PredatorComponent &) {
+          DrawCube(position, entityWidth, entityWidth, entityWidth, RED);
+          DrawCubeWires(position, entityWidth, entityWidth, entityWidth,
+                        MAROON);
+        });
+    ecs.query<const Position, const PreyTag &>().each(
         [&](flecs::entity entity, const Position &position, const PreyTag &) {
           DrawCube(position, entityWidth, entityWidth, entityWidth, GREEN);
           DrawCubeWires(position, entityWidth, entityWidth, entityWidth, LIME);

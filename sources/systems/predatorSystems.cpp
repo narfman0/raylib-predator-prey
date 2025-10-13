@@ -5,6 +5,8 @@
 #include "util.h"
 
 void initializePredatorSystems(flecs::world &ecs) {
+  static flecs::query<const PreyTag> preyQuery;
+  preyQuery = ecs.query<const PreyTag>();
   ecs.system<PredatorComponent, const Position>("Predator Targeting System")
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, PredatorComponent &predatorComponent,
@@ -15,18 +17,17 @@ void initializePredatorSystems(flecs::world &ecs) {
         float minDistSq = pursuitRangeSq;
         flecs::entity closestPrey;
         Vector3 closestPreyPosition;
-        ecs.query<const PreyTag>().each(
-            [&](flecs::entity entity, const PreyTag &) {
-              auto &preyPosition = entity.get<Position>();
-              if (aabb(position, pursuitRange, preyPosition)) {
-                const float distSq = Vector3DistanceSqr(position, preyPosition);
-                if (distSq < minDistSq) {
-                  minDistSq = distSq;
-                  closestPrey = entity;
-                  closestPreyPosition = preyPosition;
-                }
-              }
-            });
+        preyQuery.each([&](flecs::entity entity, const PreyTag &) {
+          auto &preyPosition = entity.get<Position>();
+          if (aabb(position, pursuitRange, preyPosition)) {
+            const float distSq = Vector3DistanceSqr(position, preyPosition);
+            if (distSq < minDistSq) {
+              minDistSq = distSq;
+              closestPrey = entity;
+              closestPreyPosition = preyPosition;
+            }
+          }
+        });
         if (closestPrey.is_valid()) {
           predatorComponent.target = closestPrey;
           predatorComponent.targetDistanceSq = minDistSq;
