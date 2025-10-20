@@ -13,7 +13,8 @@ void spawnEntity(flecs::world &ecs, bool isPredator,
           .set<Velocity>({vel})
           .set<Energy>({randRange(spawnEnergy * 0.2F, spawnEnergy * 0.7F)});
   if (isPredator) {
-    entity.add<PredatorComponent>();
+    entity.add<PredatorTag>();
+    entity.add<TargetComponent>();
   } else {
     entity.add<PreyTag>();
   }
@@ -28,7 +29,7 @@ void initializeEnergySystems(flecs::world &ecs) {
             return;
           energy.energy -= spawnEnergy * 0.5F;
           ecs.defer([&ecs, &entity]() {
-            spawnEntity(ecs, entity.has<PredatorComponent>(),
+            spawnEntity(ecs, entity.has<PredatorTag>(),
                         entity.get<Position>());
           });
         }
@@ -41,11 +42,11 @@ void initializeEnergySystems(flecs::world &ecs) {
           entity.destruct();
         }
       });
-  ecs.system<Energy, const PredatorComponent>("Predator Energy System")
+  ecs.system<Energy, const PredatorTag>("Predator Energy System")
       .multi_threaded(true)
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, Energy &energy,
-                   const PredatorComponent &) {
+                   const PredatorTag &) {
         energy.energy -= (GetFrameTime() * predatorEnergyLossFactor);
       });
   ecs.system<Energy, const PreyTag>("Prey Energy System")

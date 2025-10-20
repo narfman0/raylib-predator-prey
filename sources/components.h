@@ -5,16 +5,21 @@
 
 #include "globals.h"
 
-struct PredatorComponent {
+struct TargetComponent {
   flecs::entity target;
   float targetDistanceSq = -1.0F;
   Vector3 targetPosition;
   int framesTillNextTargetSearch;
 };
 
+struct PredatorTag {
+  bool filler;
+};
+
 struct PreyTag {
   bool filler;
 };
+
 
 struct Position : Vector3 {};
 struct Velocity : Vector3 {};

@@ -65,9 +65,9 @@ int main(void) {
     ClearBackground(RAYWHITE);
     BeginMode3D(camera);
 
-    ecs.query<const Position, const PredatorComponent &>().each(
+    ecs.query<const Position, const PredatorTag &>().each(
         [&](flecs::entity entity, const Position &position,
-            const PredatorComponent &) {
+            const PredatorTag &) {
           DrawCube(position, entityWidth, entityWidth, entityWidth, RED);
           DrawCubeWires(position, entityWidth, entityWidth, entityWidth,
                         MAROON);
@@ -83,7 +83,7 @@ int main(void) {
     DrawText(std::format("Entities: {}", ecs.count<Position>()).c_str(), 10, 40,
              20, DARKGRAY);
     DrawText(
-        std::format("Predators: {}", ecs.count<PredatorComponent>()).c_str(),
+        std::format("Predators: {}", ecs.count<PredatorTag>()).c_str(),
         10, 80, 20, DARKGRAY);
     DrawText(std::format("Prey: {}", ecs.count<PreyTag>()).c_str(), 10, 120, 20,
              DARKGRAY);
