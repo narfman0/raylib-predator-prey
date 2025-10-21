@@ -68,14 +68,13 @@ int main(void) {
     ecs.query<const Position, const PredatorTag &>().each(
         [&](flecs::entity entity, const Position &position,
             const PredatorTag &) {
-          DrawCube(position, entityWidth, entityWidth, entityWidth, RED);
-          DrawCubeWires(position, entityWidth, entityWidth, entityWidth,
-                        MAROON);
+          DrawCylinder(position, entityRadius, entityRadius, entityHeight, 8, RED);
+          DrawCylinderWires(position, entityRadius, entityRadius, entityHeight, 8, MAROON);
         });
     ecs.query<const Position, const PreyTag &>().each(
         [&](flecs::entity entity, const Position &position, const PreyTag &) {
-          DrawCube(position, entityWidth, entityWidth, entityWidth, GREEN);
-          DrawCubeWires(position, entityWidth, entityWidth, entityWidth, LIME);
+          DrawCylinder(position, entityRadius, entityRadius, entityHeight, 8, GREEN);
+          DrawCylinderWires(position, entityRadius, entityRadius, entityHeight, 8, LIME);
         });
 
     DrawGrid(gridSize, 1.0F);

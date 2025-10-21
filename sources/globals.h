@@ -15,4 +15,6 @@ const int targetFps = 60;
 const int maxEntities = 2000;
 const float pursuitRange = 10.0F;
 const float pursuitRangeSq = pursuitRange * pursuitRange;
-const float entityWidth = 1.0F;
+const float entityRadius = 0.5f;
+const float entityDiameter = entityRadius * 2.0f;
+const float entityHeight = 2.0F;
