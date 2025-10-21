@@ -7,9 +7,9 @@
 void initializePredatorSystems(flecs::world &ecs) {
   ecs.system<const PredatorTag, TargetComponent, const Position>("Predator Targeting System")
       .kind(flecs::OnUpdate)
-      .each([&ecs](flecs::entity entity, const PredatorTag&, TargetComponent &TargetComponent,
+      .each([&ecs](flecs::entity entity, const PredatorTag&, TargetComponent &targetComponent,
                    const Position &position) {
-        if (--TargetComponent.framesTillNextTargetSearch > 0) {
+        if (--targetComponent.framesTillNextTargetSearch > 0) {
           return;
         }
         float minDistSq = pursuitRangeSq;
@@ -28,13 +28,13 @@ void initializePredatorSystems(flecs::world &ecs) {
               }
             });
         if (closestPrey.is_valid()) {
-          TargetComponent.target = closestPrey;
-          TargetComponent.targetDistanceSq = minDistSq;
-          TargetComponent.targetPosition = closestPreyPosition;
+          targetComponent.target = closestPrey;
+          targetComponent.targetDistanceSq = minDistSq;
+          targetComponent.targetPosition = closestPreyPosition;
         } else {
-          TargetComponent.target = flecs::entity();
+          targetComponent.target = flecs::entity();
         }
-        TargetComponent.framesTillNextTargetSearch =
+        targetComponent.framesTillNextTargetSearch =
             predatorTargetSearchCooldownFramesMin + rand() % 3;
       });
   ecs.system<const PredatorTag, const TargetComponent, const Position, Velocity, Energy>(
@@ -42,18 +42,18 @@ void initializePredatorSystems(flecs::world &ecs) {
       .multi_threaded(true)
       .kind(flecs::OnUpdate)
       .each([&ecs](flecs::entity entity, const PredatorTag&,
-                   const TargetComponent &TargetComponent,
+                   const TargetComponent &targetComponent,
                    const Position &position, Velocity &velocity,
                    Energy &energy) {
-        if (TargetComponent.target.is_valid()) {
-          if (TargetComponent.targetDistanceSq > entityDiameter) {
+        if (targetComponent.target.is_valid()) {
+          if (targetComponent.targetDistanceSq > entityDiameter) {
             Vector3 dir =
-                Vector3Subtract(TargetComponent.targetPosition, position);
+                Vector3Subtract(targetComponent.targetPosition, position);
             dir = Vector3Scale(Vector3Normalize(dir), speed);
             velocity.x = dir.x;
             velocity.z = dir.z;
           } else {
-            TargetComponent.target.destruct();
+            targetComponent.target.destruct();
             energy.energy += predatorEnergyGainAmount;
           }
         }
