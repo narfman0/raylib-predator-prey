@@ -1,0 +1,5 @@
+Checks: '-*,bugprone,cppcoreguidelines,clang-analyzer'
+CheckOptions:
+  readability-identifier-naming.VariableCase: camelBack
+  readability-identifier-naming.FunctionCase: camelBack
+FormatStyle: 'llvm'

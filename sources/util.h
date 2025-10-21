@@ -2,6 +2,8 @@
 
 #include <cstdlib>
 
+#include <raylib.h>
+
 inline bool aabb(Vector3 entityPosition, float entityWidth,
                  Vector3 targetPosition) {
   // AABB collision detection on the XZ plane
