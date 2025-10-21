@@ -3,6 +3,7 @@
 #include "components.h"
 #include "globals.h"
 #include "util.h"
+#include "physicsSystems.h"
 
 void spawnEntity(flecs::world &ecs, bool isPredator,
                  const Vector3 &parentPosition) {
@@ -12,6 +13,9 @@ void spawnEntity(flecs::world &ecs, bool isPredator,
           .set<Position>({parentPosition})
           .set<Velocity>({vel})
           .set<Energy>({randRange(spawnEnergy * 0.2F, spawnEnergy * 0.7F)});
+  // Create physics body and attach PhysicsBody component
+  b2Body* body = createCircleBody(ecs, parentPosition, 0.5f, true, entity);
+  entity.set<PhysicsBody>({body});
   if (isPredator) {
     entity.add<PredatorTag>();
     entity.add<TargetComponent>();

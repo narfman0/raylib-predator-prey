@@ -10,3 +10,4 @@ void spawnEntity(flecs::world &ecs, bool isPredator,
 void initializeTransformSystems(flecs::world &ecs);
 void initializeEnergySystems(flecs::world &ecs);
 void initializePredatorSystems(flecs::world &ecs);
+void initializePhysicsSystems(flecs::world &ecs);

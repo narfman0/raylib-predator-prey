@@ -21,6 +21,7 @@ static void initializeEntities(flecs::world &ecs, int count, bool isPredator) {
 
 static void initialize(flecs::world &ecs) {
   spdlog::info("Initializing world...");
+  initializePhysicsSystems(ecs);
   initializeEntities(ecs, initialPredators, true);
   initializeEntities(ecs, initialPrey, false);
   initializeEnergySystems(ecs);
